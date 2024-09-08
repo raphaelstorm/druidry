@@ -6,31 +6,21 @@ plugins {
     id 'net.neoforged.gradle.userdev' version '7.0.145'
 }
 
-tasks.named('wrapper', Wrapper).configure {
-    // Define wrapper values here so as to not have to always do so when updating gradlew.properties.
-    // Switching this to Wrapper.DistributionType.ALL will download the full gradle sources that comes with
-    // documentation attached on cursor hover of gradle classes and methods. However, this comes with increased
-    // file size for Gradle. If you do switch this to ALL, run the Gradle wrapper task twice afterwards.
-    // (Verify by checking gradle/wrapper/gradle-wrapper.properties to see if distributionUrl now points to `-all`)
-    distributionType = Wrapper.DistributionType.BIN
-}
-
 version = mod_version
 group = mod_group_id
-
-repositories {
-    mavenLocal()
-}
 
 base {
     archivesName = mod_id
 }
 
+minecraft {
+    accessTransformers {
+        file('src/main/resources/META-INF/accesstransformer.cfg')
+    }
+}
+
 // Mojang ships Java 21 to end users starting in 1.20.5, so mods should target Java 21.
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
-
-//minecraft.accessTransformers.file rootProject.file('src/main/resources/META-INF/accesstransformer.cfg')
-//minecraft.accessTransformers.entry public net.minecraft.client.Minecraft textureManager # textureManager
 
 // Default run configurations.
 // These can be tweaked, removed, or duplicated as needed.
@@ -82,43 +72,69 @@ runs {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 // Sets up a dependency configuration called 'localRuntime'.
-// This configuration should be used instead of 'runtimeOnly' to declare
-// a dependency that will be present for runtime testing but that is
-// "optional", meaning it will not be pulled by dependents of this mod.
 configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
+repositories {
+    maven {
+        name = "Iron's Maven - Release"
+        url = "https://code.redspace.io/releases"
+    }
+
+    maven {
+        name = "Iron's Maven - Snapshots"
+        url = "https://code.redspace.io/snapshots"
+    }
+
+    maven { url = "https://maven.enginehub.org/repo/" }
+    maven { url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
+    maven { url = "https://maven.theillusivec4.top" }
+    maven { url = "https://cursemaven.com" }
+    maven { url = "https://maven.blamejared.com" }
+    maven { url = "https://maven.kosmx.dev/" }
+}
+
+jarJar.enable()
+
 dependencies {
-    // Specify the version of Minecraft to use.
-    // Depending on the plugin applied there are several options. We will assume you applied the userdev plugin as shown above.
-    // The group for userdev is net.neoforged, the module name is neoforge, and the version is the same as the neoforge version.
-    // You can however also use the vanilla plugin (net.neoforged.gradle.vanilla) to use a version of Minecraft without the neoforge loader.
-    // And its provides the option to then use net.minecraft as the group, and one of; client, server or joined as the module name, plus the game version as version.
-    // For all intends and purposes: You can treat this dependency as if it is a normal library you would use.
+    // FORGE ******************************************************************************************************
     implementation "net.neoforged:neoforge:${neo_version}"
 
-    // Example optional mod dependency with JEI
-    // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
-    // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
-    // compileOnly "mezz.jei:jei-${mc_version}-neoforge-api:${jei_version}"
-    // We add the full version to localRuntime, not runtimeOnly, so that we do not publish a dependency on it
-    // localRuntime "mezz.jei:jei-${mc_version}-neoforge:${jei_version}"
+    // IRONS SPELLS N SPELLBOOKS **********************************************************************************
+    implementation "io.redspace:irons_spellbooks:${irons_spells_version}"
 
-    // Example mod dependency using a mod jar from ./libs with a flat dir repository
-    // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar
-    // The group id is ignored when searching -- in this case, it is "blank"
-    // implementation "blank:coolmod-${mc_version}:${coolmod_version}"
+    // GECKOLIB ***************************************************************************************************
+    implementation "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
 
-    // Example mod dependency using a file as dependency
-    // implementation files("libs/coolmod-${mc_version}-${coolmod_version}.jar")
+    // CAELUS *****************************************************************************************************
+    compileOnly "com.illusivesoulworks.caelus:caelus-neoforge:${caelus_version}:api"
+    localRuntime "com.illusivesoulworks.caelus:caelus-neoforge:${caelus_version}"
 
-    // Example project dependency using a sister or child project:
-    // implementation project(":myproject")
+    // PLAYER ANIMATOR ********************************************************************************************
+    implementation "dev.kosmx.player-anim:player-animation-lib-forge:${player_animator_version}"
+    jarJar(group: "dev.kosmx.player-anim", name: "player-animation-lib-forge", version: "[${player_animator_version},${player_animator_version}]")
 
-    // For more info:
-    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
-    // http://www.gradle.org/docs/current/userguide/dependency_management.html
+    // TETRA ******************************************************************************************************
+    compileOnly "curse.maven:tetra-${tetra_version}"
+    compileOnly "se.mickelus.mutil:mutil:${mutil_version}"
+
+    // JEI ********************************************************************************************************
+    compileOnly "mezz.jei:jei-${jei_mc_version}-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${jei_mc_version}-neoforge-api:${jei_version}"
+    runtimeOnly "mezz.jei:jei-${jei_mc_version}-neoforge:${jei_version}"
+
+    // CURIOS *****************************************************************************************************
+    //todo: 1.21: find correct maven for new curios
+    implementation "curse.maven:adorned-1036809:5546365"
+
+//
+//    // APOTHEOSIS
+    compileOnly "curse.maven:apotheosis-${apotheosis_version}"
+
+    // JSON ******************************************************************************************************
+    implementation "com.google.code.gson:gson:${gson_version}"
+
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
@@ -132,12 +148,20 @@ tasks.withType(ProcessResources).configureEach {
             neo_version            : neo_version,
             neo_version_range      : neo_version_range,
             loader_version_range   : loader_version_range,
+            caelus_version         : caelus_version,
+            geckolib_version       : geckolib_version,
+            player_animator_version: player_animator_version,
             mod_id                 : mod_id,
             mod_name               : mod_name,
-            mod_license            : mod_license,
             mod_version            : mod_version,
+            mod_license            : mod_license,
             mod_authors            : mod_authors,
-            mod_description        : mod_description
+            mod_credits            : mod_credits,
+            mod_description        : mod_description,
+            mod_display_url        : mod_display_url,
+            mod_issue_tracker      : mod_issue_tracker,
+            mod_logo_file          : mod_logo_file,
+            irons_spells_version   : irons_spells_version
     ]
     inputs.properties replaceProperties
 
@@ -146,16 +170,59 @@ tasks.withType(ProcessResources).configureEach {
     }
 }
 
+jar {
+    manifest {
+        attributes([
+                "Specification-Title"     : mod_name,
+                "Specification-Vendor"    : mod_authors,
+                "Specification-Version"   : "1", // We are version 1 of ourselves
+                "Implementation-Title"    : project.name,
+                "Implementation-Version"  : project.jar.archiveVersion,
+                "Implementation-Vendor"   : mod_authors,
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+        ])
+    }
+    exclude('**/*.psd')
+    exclude('**/*.bbmodel')
+}
+
+java {
+    withSourcesJar()
+}
+
+artifacts {
+    archives sourcesJar
+}
+
 // Example configuration to allow publishing using the maven-publish plugin
 publishing {
+    tasks.publish.dependsOn 'build'
     publications {
-        register('mavenJava', MavenPublication) {
-            from components.java
+
+        mavenJava(MavenPublication) {
+            artifactId project.archivesBaseName
+            artifact jar
+            artifact sourcesJar
         }
     }
+
     repositories {
         maven {
-            url "file://${project.projectDir}/repo"
+            name = "redspace"
+
+            if (project.version.endsWith('-SNAPSHOT')) {
+                url uri("https://code.redspace.io/snapshots")
+            } else {
+                url uri("https://code.redspace.io/releases")
+            }
+
+            credentials {
+                username = System.getenv("MAVEN_USER")
+                password = System.getenv("MAVEN_PASS")
+            }
+            authentication {
+                basic(BasicAuthentication)
+            }
         }
     }
 }
