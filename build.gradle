@@ -125,11 +125,9 @@ dependencies {
     runtimeOnly "mezz.jei:jei-${jei_mc_version}-neoforge:${jei_version}"
 
     // CURIOS *****************************************************************************************************
-    //todo: 1.21: find correct maven for new curios
     implementation "curse.maven:adorned-1036809:5546365"
 
-//
-//    // APOTHEOSIS
+   // APOTHEOSIS
     compileOnly "curse.maven:apotheosis-${apotheosis_version}"
 
     // JSON ******************************************************************************************************
@@ -209,7 +207,6 @@ publishing {
     repositories {
         maven {
             name = "redspace"
-
             if (project.version.endsWith('-SNAPSHOT')) {
                 url uri("https://code.redspace.io/snapshots")
             } else {

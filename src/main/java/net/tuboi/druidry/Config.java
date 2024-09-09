@@ -1,4 +1,4 @@
-package net.toboi.druidry;
+package net.tuboi.druidry;
 
 import java.util.List;
 import java.util.Set;
