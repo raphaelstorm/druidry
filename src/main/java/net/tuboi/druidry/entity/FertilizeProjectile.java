@@ -2,6 +2,7 @@ package net.tuboi.druidry.entity;
 
 import io.redspace.ironsspellbooks.entity.spells.AbstractConeProjectile;
 import io.redspace.ironsspellbooks.registries.EntityRegistry;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
@@ -23,7 +24,7 @@ public class FertilizeProjectile extends AbstractConeProjectile {
     @Override
     public void spawnParticles() {
         var owner = getOwner();
-        if (!level.isClientSide || owner == null) {
+        if (!level().isClientSide || owner == null) {
             return;
         }
         Vec3 rotation = owner.getLookAngle().normalize();
@@ -43,7 +44,7 @@ public class FertilizeProjectile extends AbstractConeProjectile {
             double angularness = .5;
             Vec3 randomVec = new Vec3(Math.random() * 2 * angularness - angularness, Math.random() * 2 * angularness - angularness, Math.random() * 2 * angularness - angularness).normalize();
             Vec3 result = (rotation.scale(3).add(randomVec)).normalize().scale(speed);
-            level.addParticle(ParticleHelper.FERTILIZER_EMITTER, x + ox, y + oy, z + oz, result.x, result.y, result.z);
+            level().addParticle(ParticleHelper.FERTILIZER_EMITTER, x + ox, y + oy, z + oz, result.x, result.y, result.z);
         }
     }
 
