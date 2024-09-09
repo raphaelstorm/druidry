@@ -22,7 +22,7 @@ import java.util.Optional;
 
 @AutoSpellConfig
 public class FertilizeSpell extends AbstractSpell {
-    private final ResourceLocation spellId = new ResourceLocation(Druidry.MODID, "fertilize");
+    private final ResourceLocation spellId = ResourceLocation.fromNamespaceAndPath(Druidry.MODID, "fertilize");
 
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {

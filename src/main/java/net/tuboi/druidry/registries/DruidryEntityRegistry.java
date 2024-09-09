@@ -22,8 +22,8 @@ public class DruidryEntityRegistry  {
     }
 
     public static final DeferredHolder<EntityType<?>, EntityType<FertilizeProjectile>> FERTILIZE_PROJECTILE =
-            ENTITIES.register("fertilizer", () -> EntityType.Builder.<FertilizeProjectile>of(FertilizeProjectile::new, MobCategory.MISC)
+            ENTITIES.register("fertilizer_projectile", () -> EntityType.Builder.<FertilizeProjectile>of(FertilizeProjectile::new, MobCategory.MISC)
                     .sized(1f, 1f)
                     .clientTrackingRange(64)
-                    .build(new ResourceLocation(Druidry.MODID, "fertilizer")).toString());
+                    .build(ResourceLocation.fromNamespaceAndPath(Druidry.MODID, "fertilizer_projectile").toString()));
 }
