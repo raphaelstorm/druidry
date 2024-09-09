@@ -1,4 +1,4 @@
-package net.tooboi.druidry;
+package net.toboi.druidry;
 
 import org.slf4j.Logger;
 
@@ -42,6 +42,7 @@ public class Druidry
     public static final String MODID = "2bois_druidry";
     // Directly reference a slf4j logger
     private static final Logger LOGGER = LogUtils.getLogger();
+
     // Create a Deferred Register to hold Blocks which will all be registered under the "examplemod" namespace
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
     // Create a Deferred Register to hold Items which will all be registered under the "examplemod" namespace
