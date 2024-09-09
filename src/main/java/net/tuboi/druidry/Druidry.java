@@ -1,5 +1,7 @@
 package net.tuboi.druidry;
 
+import net.tuboi.druidry.registries.DruidryEntityRegistry;
+import net.tuboi.druidry.registries.DruidrySpellRegistry;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -38,6 +40,10 @@ public class Druidry
 
         // Register the item to a creative tab
         modEventBus.addListener(this::addCreative);
+
+        DruidrySpellRegistry.register(modEventBus);
+
+        DruidryEntityRegistry.register(modEventBus);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
