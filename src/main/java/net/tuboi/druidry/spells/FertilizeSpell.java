@@ -27,7 +27,7 @@ public class FertilizeSpell extends AbstractSpell {
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
-                Component.translatable("ui.irons_spellbooks.aoe_healing", Utils.stringTruncation(getSpellPower(spellLevel, caster), 1))
+                Component.translatable("ui.irons_spellbooks.cooldown", GetCoolDown(getSpellPower(spellLevel, caster)), 1)
         );
     }
 
@@ -36,7 +36,7 @@ public class FertilizeSpell extends AbstractSpell {
         this.manaCostPerLevel = 1;
         this.baseSpellPower = 0;
         this.spellPowerPerLevel = 1;
-        this.castTime = 100;
+        this.castTime = 100; //Cast time in ticks, 5 seconds
         this.baseManaCost = 5;
     }
 
@@ -44,8 +44,24 @@ public class FertilizeSpell extends AbstractSpell {
             .setMinRarity(SpellRarity.COMMON)
             .setSchoolResource(SchoolRegistry.NATURE_RESOURCE)
             .setMaxLevel(5)
-            .setCooldownSeconds(10)
+            .setCooldownSeconds(GetCoolDown(1))
             .build();
+
+
+    //Get the cooldown of the spell based on it's level and the casters power
+    private Float GetCoolDown(float spellpower){
+        Float cooldown = 6000f;
+
+        //Retract 1 minute from cooldown per spell level above first
+        cooldown -= 1200*(spellpower-1);
+
+        //If cooldown is below 20, set to 20 (1 second)
+        if (cooldown < 20){
+            cooldown = 20f;
+        }
+
+        return cooldown;
+    }
 
     @Override
     public ResourceLocation getSpellResource(){
@@ -69,14 +85,14 @@ public class FertilizeSpell extends AbstractSpell {
 
     @Override
     public void onCast(Level world, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData){
-        if (
+        if ( //If projectile already exists
                 playerMagicData.isCasting()
                 && playerMagicData.getCastingSpellId().equals(this.getSpellId())
                 && playerMagicData.getAdditionalCastData() instanceof EntityCastData entityCastData
                 && entityCastData.getCastingEntity() instanceof AbstractConeProjectile cone
-        ) {
+        ) { //Tick damage
             cone.setDealDamageActive();
-        } else {
+        } else { //Create a new projectile
             FertilizeProjectile fertilizeProjectile = new FertilizeProjectile(world, entity);
             fertilizeProjectile.setPos(entity.position().add(0, entity.getEyeHeight() * .7, 0));
             world.addFreshEntity(fertilizeProjectile);

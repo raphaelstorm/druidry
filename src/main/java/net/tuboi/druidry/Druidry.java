@@ -41,8 +41,10 @@ public class Druidry
         // Register the item to a creative tab
         modEventBus.addListener(this::addCreative);
 
+        //Register spells
         DruidrySpellRegistry.register(modEventBus);
 
+        //Register entities
         DruidryEntityRegistry.register(modEventBus);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us

@@ -35,15 +35,18 @@ public class FertilizeProjectile extends AbstractConeProjectile {
         double z = pos.z;
 
         double speed = random.nextDouble() * .35 + .35;
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) { //Create particle beams
             double offset = .15;
             double ox = Math.random() * 2 * offset - offset;
             double oy = Math.random() * 2 * offset - offset;
             double oz = Math.random() * 2 * offset - offset;
 
+            //Create random speed vectors for particle beams
             double angularness = .5;
             Vec3 randomVec = new Vec3(Math.random() * 2 * angularness - angularness, Math.random() * 2 * angularness - angularness, Math.random() * 2 * angularness - angularness).normalize();
             Vec3 result = (rotation.scale(3).add(randomVec)).normalize().scale(speed);
+
+            //Create particles
             level().addParticle(ParticleHelper.FERTILIZER_EMITTER, x + ox, y + oy, z + oz, result.x, result.y, result.z);
         }
     }
