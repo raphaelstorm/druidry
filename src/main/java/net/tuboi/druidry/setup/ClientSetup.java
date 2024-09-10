@@ -11,7 +11,7 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.tuboi.druidry.Druidry;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
 
-@EventBusSubscriber(modid = Druidry.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Druidry.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ClientSetup {
 
     @SubscribeEvent
