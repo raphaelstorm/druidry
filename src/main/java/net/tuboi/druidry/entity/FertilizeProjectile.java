@@ -7,6 +7,7 @@ import io.redspace.ironsspellbooks.entity.spells.AbstractShieldEntity;
 import io.redspace.ironsspellbooks.registries.EntityRegistry;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -39,7 +40,7 @@ public class FertilizeProjectile extends AbstractConeProjectile {
         if (!level().isClientSide) {
             if (dealDamageActive) {
                     float range = 15 * Mth.DEG_TO_RAD;
-                    for (int i = 0; i < 3; i++) {
+                    for (int i = 0; i < 10; i++) { //Numbers of fired rays
                         Vec3 cast = getOwner().getLookAngle().normalize().xRot(Utils.random.nextFloat() * range * 2 - range).yRot(Utils.random.nextFloat() * range * 2 - range);
                         HitResult hitResult = level().clip(new ClipContext(getOwner().getEyePosition(), getOwner().getEyePosition().add(cast.scale(10)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
                         Vec3 pos = hitResult.getLocation().subtract(cast.scale(.5));
@@ -91,8 +92,21 @@ public class FertilizeProjectile extends AbstractConeProjectile {
             Vec3 randomVec = new Vec3(Math.random() * 2 * angularness - angularness, Math.random() * 2 * angularness - angularness, Math.random() * 2 * angularness - angularness).normalize();
             Vec3 result = (rotation.scale(3).add(randomVec)).normalize().scale(speed);
 
-            //Create particles
-            level().addParticle(ParticleHelper.FERTILIZER_EMITTER, x + ox, y + oy, z + oz, result.x, result.y, result.z);
+
+            ParticleOptions ParticleToEmit = null;
+            if(i<=3){ //Create leaf particles 4/5 times
+                ParticleToEmit = ParticleHelper.LEAF_EMITTER;
+            }else{ //Create flower particles 1/5 times
+                //50/50 odds between white and pink flower
+                if(getRandom().nextBoolean()){
+                    ParticleToEmit = ParticleHelper.WHITE_FLOWER_EMITTER;
+                }else{
+                    ParticleToEmit = ParticleHelper.PINK_FLOWER_EMITTER;
+                }
+            }
+            //Display particle
+            level().addParticle(ParticleToEmit, x + ox, y + oy, z + oz, result.x, result.y, result.z);
+
         }
     }
 

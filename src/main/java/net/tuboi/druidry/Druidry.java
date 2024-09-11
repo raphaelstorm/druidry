@@ -1,6 +1,7 @@
 package net.tuboi.druidry;
 
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
+import net.tuboi.druidry.registries.DruidryParticleRegistry;
 import net.tuboi.druidry.registries.DruidrySpellRegistry;
 import org.slf4j.Logger;
 
@@ -46,6 +47,9 @@ public class Druidry
 
         //Register entities
         DruidryEntityRegistry.register(modEventBus);
+
+        //Register particles
+        DruidryParticleRegistry.register(modEventBus);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
