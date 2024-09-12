@@ -1,0 +1,10 @@
+{
+  "spell.windy_leaves.loop": {
+    "sounds": [
+      "tubois_druidry:windy_leaves/loop1",
+      "tubois_druidry:windy_leaves/loop2",
+      "tubois_druidry:windy_leaves/loop3",
+      "tubois_druidry:windy_leaves/loop4"
+    ]
+  }
+}

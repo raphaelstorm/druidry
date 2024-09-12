@@ -1,20 +1,14 @@
 package net.tuboi.druidry.setup;
 
-import io.redspace.ironsspellbooks.IronsSpellbooks;
-import io.redspace.ironsspellbooks.particle.*;
-import io.redspace.ironsspellbooks.registries.EntityRegistry;
-import io.redspace.ironsspellbooks.registries.ParticleRegistry;
 import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.tuboi.druidry.Druidry;
-import net.tuboi.druidry.particle.LeafParticle;
-import net.tuboi.druidry.particle.PinkFlowerParticle;
-import net.tuboi.druidry.particle.WhiteFlowerParticle;
+import net.tuboi.druidry.particle.FertilizerParticle;
+import net.tuboi.druidry.particle.FlowerParticle;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
 import net.tuboi.druidry.registries.DruidryParticleRegistry;
 
@@ -28,8 +22,7 @@ public class ClientSetup {
 
     @SubscribeEvent
     public static void registerParticles(RegisterParticleProvidersEvent event) {
-        event.registerSpriteSet(DruidryParticleRegistry.LEAF_PARTICLE.get(), LeafParticle.Provider::new);
-        event.registerSpriteSet(DruidryParticleRegistry.WHITE_FLOWER_PARTICLE.get(), WhiteFlowerParticle.Provider::new);
-        event.registerSpriteSet(DruidryParticleRegistry.PINK_FLOWER_PARTICLE.get(), PinkFlowerParticle.Provider::new);
+        event.registerSpriteSet(DruidryParticleRegistry.FERTILIZER_PARTICLE.get(), FertilizerParticle.Provider::new);
+        event.registerSpriteSet(DruidryParticleRegistry.FLOWER_PARTICLE.get(), FlowerParticle.Provider::new);
     }
 }

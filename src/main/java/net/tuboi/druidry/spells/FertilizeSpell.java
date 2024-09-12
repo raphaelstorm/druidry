@@ -16,6 +16,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.tuboi.druidry.Druidry;
 import net.tuboi.druidry.entity.FertilizeProjectile;
+import net.tuboi.druidry.registries.DruidrySoundRegistry;
 
 import java.util.List;
 import java.util.Optional;
@@ -56,7 +57,7 @@ public class FertilizeSpell extends AbstractSpell {
         cooldown -= 1200*(spellpower-1);
 
         //If cooldown is below 20, set to 20 (1 second)
-        if (cooldown < 20){
+        if (cooldown < 20f){
             cooldown = 20f;
         }
 
@@ -80,7 +81,7 @@ public class FertilizeSpell extends AbstractSpell {
 
     @Override
     public Optional<SoundEvent> getCastFinishSound() {
-        return Optional.of(SoundRegistry.FIRE_BREATH_LOOP.get());
+            return Optional.of(DruidrySoundRegistry.WINDY_LEAVES.get());
     }
 
     @Override
