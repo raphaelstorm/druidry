@@ -28,16 +28,16 @@ public class FertilizeSpell extends AbstractSpell {
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
-                Component.translatable("ui.irons_spellbooks.cooldown", GetCoolDown(getSpellPower(spellLevel, caster)), 1)
+                Component.translatable("ui.irons_spellbooks.cast_range",GetRange(getSpellPower(spellLevel, caster))) //Range is equal to power for this spell
         );
     }
 
     //Set the basic properties of the spell
     public FertilizeSpell(){
-        this.manaCostPerLevel = 1;
-        this.baseSpellPower = 0;
+        this.manaCostPerLevel = 2;
+        this.baseSpellPower = 4;
         this.spellPowerPerLevel = 1;
-        this.castTime = 100; //Cast time in ticks, 5 seconds
+        this.castTime = 200;
         this.baseManaCost = 5;
     }
 
@@ -45,23 +45,12 @@ public class FertilizeSpell extends AbstractSpell {
             .setMinRarity(SpellRarity.COMMON)
             .setSchoolResource(SchoolRegistry.NATURE_RESOURCE)
             .setMaxLevel(5)
-            .setCooldownSeconds(GetCoolDown(1))
+            .setCooldownSeconds(15)
             .build();
 
 
-    //Get the cooldown of the spell based on it's level and the casters power
-    private Float GetCoolDown(float spellpower){
-        Float cooldown = 6000f;
-
-        //Retract 1 minute from cooldown per spell level above first
-        cooldown -= 1200*(spellpower-1);
-
-        //If cooldown is below 20, set to 20 (1 second)
-        if (cooldown < 20f){
-            cooldown = 20f;
-        }
-
-        return cooldown;
+    public float GetRange(float spellpower){
+        return spellpower * 1.5f;
     }
 
     @Override
@@ -94,7 +83,7 @@ public class FertilizeSpell extends AbstractSpell {
         ) { //Tick damage
             cone.setDealDamageActive();
         } else { //Create a new projectile
-            FertilizeProjectile fertilizeProjectile = new FertilizeProjectile(world, entity);
+            FertilizeProjectile fertilizeProjectile = new FertilizeProjectile(world, entity, getSpellPower(spellLevel, entity));
             fertilizeProjectile.setPos(entity.position().add(0, entity.getEyeHeight() * .7, 0));
             world.addFreshEntity(fertilizeProjectile);
 

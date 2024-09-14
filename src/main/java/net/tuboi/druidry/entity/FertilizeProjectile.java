@@ -8,6 +8,13 @@ import io.redspace.ironsspellbooks.registries.EntityRegistry;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.network.chat.ChatType;
+import net.minecraft.network.chat.OutgoingChatMessage;
+import net.minecraft.network.chat.PlayerChatMessage;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.commands.SayCommand;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -22,26 +29,56 @@ import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.Logging;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
 import net.tuboi.druidry.utils.ParticleHelper;
+import net.tuboi.druidry.utils.SendMessage;
 
 public class FertilizeProjectile extends AbstractConeProjectile {
+    private static final EntityDataAccessor<Float> SPELLPOWER = SynchedEntityData.defineId(FertilizeProjectile.class, EntityDataSerializers.FLOAT);
+
 
     public FertilizeProjectile(EntityType<? extends AbstractConeProjectile> entityType, Level level) {
         super(entityType, level);
     }
 
-    public FertilizeProjectile(Level level, LivingEntity entity) {
+    public FertilizeProjectile(Level level, LivingEntity entity, Float spellpower) {
         super(DruidryEntityRegistry.FERTILIZE_PROJECTILE.get(),level,entity);
+        this.entityData.set(SPELLPOWER, spellpower);;
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder pBuilder) {
+        super.defineSynchedData(pBuilder);
+        pBuilder.define(SPELLPOWER, 0f);
     }
 
     @Override
     public void tick() {
         if (!level().isClientSide) {
-                float range = 15 * Mth.DEG_TO_RAD;
+                float rotRange = 15 * Mth.DEG_TO_RAD; //How many degrees to either side spell can deviate
+                float range = this.entityData.get(SPELLPOWER)*1.5f; //Should realisticly be between 6 and 30 blocks
+                if(range>30){range=30;}
+                else if(range<6){range=6;}
+
                 for (int i = 0; i < 2; i++) { //Numbers of fired rays per tick
-                    Vec3 cast = getOwner().getLookAngle().normalize().xRot(Utils.random.nextFloat() * range * 2 - range).yRot(Utils.random.nextFloat() * range * 2 - range);
-                    HitResult hitResult = level().clip(new ClipContext(getOwner().getEyePosition(), getOwner().getEyePosition().add(cast.scale(10)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+
+                    Vec3 cast = getOwner()
+                            .getLookAngle()
+                            .normalize()
+                            .xRot(Utils.random.nextFloat() * rotRange * 2 - rotRange)
+                            .yRot(Utils.random.nextFloat() * rotRange * 2 - rotRange);
+
+                    HitResult hitResult = level()
+                            .clip(
+                                    new ClipContext(
+                                            getOwner().getEyePosition(),
+                                            getOwner().getEyePosition().add(cast.scale(range)),
+                                            ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this
+                                    )
+                            );
+
+
                     Vec3 pos = hitResult.getLocation().subtract(cast.scale(.5));
                     BlockPos blockPos = BlockPos.containing(pos.x, pos.y, pos.z);
 
@@ -82,8 +119,11 @@ public class FertilizeProjectile extends AbstractConeProjectile {
         double y = pos.y + owner.getEyeHeight() * .9f;
         double z = pos.z;
 
-        double speed = random.nextDouble() * .2 + .30;
-        for (int i = 0; i < 20; i++) { //Create particles
+        double speed = random.nextDouble() * .3 + 0.2 + (Math.pow(this.entityData.get(SPELLPOWER),2f))/200;
+
+        Integer particleCount = (int) Math.pow(this.entityData.get(SPELLPOWER),1.5f);
+
+        for (int i = 0; i < particleCount; i++) { //Create particles scaling with sp
 
             /* STOLEN CODE FROM IRONS
             //Create random speed vectors for particle beams
@@ -92,14 +132,14 @@ public class FertilizeProjectile extends AbstractConeProjectile {
             Vec3 result = (rotation.scale(3).add(randomVec)).normalize().scale(speed);
             */
 
-            double offset = .15;
-            double ox = Math.random() * 2 * offset - offset; // Slight position offset
+            double offset = .15; // Slight position offset
+            double ox = Math.random() * 2 * offset - offset;
             double oy = Math.random() * 2 * offset - offset;
             double oz = Math.random() * 2 * offset - offset;
 
             // Define the degree range for x (horizontal) and y (vertical)
-            double xDegreeRange = 30; // Horizontal spread in degrees
             double yDegreeRange = 15; // Vertical spread in degrees
+            double xDegreeRange = 30;
 
             // Generate random angles within the range for x and y
             double randomXAngle = (Math.random() * 2 * xDegreeRange) - xDegreeRange; // -30 to +30 degrees
