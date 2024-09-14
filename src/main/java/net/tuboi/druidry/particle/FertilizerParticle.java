@@ -23,7 +23,7 @@ public class FertilizerParticle extends TextureSheetParticle {
         this.lifetime = 10 + (int) (Math.random() * 25);
         sprites = spriteSet;
         this.setSpriteFromAge(spriteSet);
-        this.gravity = -0.01F;
+        this.gravity = (this.random.nextFloat() * 0.15f) + 0.05f;
     }
 
     @Override

@@ -20,9 +20,9 @@ public class FlowerParticle extends TextureSheetParticle {
         this.zd = zd;
         this.scale(this.random.nextFloat() * 2f + 0.5f);
         this.friction -= this.random.nextFloat() * .1;
-        this.lifetime = 10 + (int) (Math.random() * 25);
+        this.lifetime = 20 + (int) (Math.random() * 50);
         sprites = spriteSet;
-        this.gravity = -0.01F;
+        this.gravity = (this.random.nextFloat() * 0.15f) + 0.05f;
         setSprite(sprites.get(this.random));
     }
 
