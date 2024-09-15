@@ -29,25 +29,21 @@ public class FertilizeSpell extends AbstractSpell {
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
                 Component.translatable("ui.irons_spellbooks.cast_range",GetRange(getSpellPower(spellLevel, caster))), //Range is equal to power for this spell
-                Component.translatable("ui.tubois_druidry.fertilization_per_tick", GetFertilizerPerSecond(getSpellPower(spellLevel, caster)))
+                Component.translatable("ui.tubois_druidry.fertilization_per_tick", GetFertilizerPerSecond(getSpellPower(spellLevel, caster))),
+                Component.translatable("ui.tubois_druidry.regeneration_applied_seconds", (int)getSpellPower(spellLevel, caster))
         );
     }
 
     //Set the basic properties of the spell
     public FertilizeSpell(){
-        this.manaCostPerLevel = 2;
+        this.manaCostPerLevel = 3;
         this.baseSpellPower = 4;
         this.spellPowerPerLevel = 1;
         this.castTime = 200;
         this.baseManaCost = 5;
     }
 
-    private final DefaultConfig defaultConfig = new DefaultConfig()
-            .setMinRarity(SpellRarity.COMMON)
-            .setSchoolResource(SchoolRegistry.NATURE_RESOURCE)
-            .setMaxLevel(5)
-            .setCooldownSeconds(15)
-            .build();
+    private final DefaultConfig defaultConfig = new DefaultConfig().setMinRarity(SpellRarity.COMMON).setSchoolResource(SchoolRegistry.NATURE_RESOURCE).setMaxLevel(5).setCooldownSeconds(15d).build();
 
 
     public float GetRange(float spellpower){
