@@ -28,7 +28,8 @@ public class FertilizeSpell extends AbstractSpell {
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
-                Component.translatable("ui.irons_spellbooks.cast_range",GetRange(getSpellPower(spellLevel, caster))) //Range is equal to power for this spell
+                Component.translatable("ui.irons_spellbooks.cast_range",GetRange(getSpellPower(spellLevel, caster))), //Range is equal to power for this spell
+                Component.translatable("ui.tubois_druidry.fertilization_per_tick", GetFertilizerPerSecond(getSpellPower(spellLevel, caster)))
         );
     }
 
@@ -51,6 +52,10 @@ public class FertilizeSpell extends AbstractSpell {
 
     public float GetRange(float spellpower){
         return spellpower * 1.5f;
+    }
+
+    public Integer GetFertilizerPerSecond(float spellpower){
+        return (int) Math.floor(Math.pow(spellpower / 3d, 1.5d));
     }
 
     @Override

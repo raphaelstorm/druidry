@@ -61,7 +61,11 @@ public class FertilizeProjectile extends AbstractConeProjectile {
                 if(range>30){range=30;}
                 else if(range<6){range=6;}
 
-                for (int i = 0; i < 2; i++) { //Numbers of fired rays per tick
+                Double raycastcount = Math.floor(Math.pow((this.entityData.get(SPELLPOWER) / 3),1.5d));
+                if (raycastcount < 1){raycastcount=1d;}
+                else if(raycastcount < 30){raycastcount=30d;}
+
+                for (int i = 0; i < raycastcount; i++) { //Numbers of fired rays per tick
 
                     Vec3 cast = getOwner()
                             .getLookAngle()
