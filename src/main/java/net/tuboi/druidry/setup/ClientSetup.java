@@ -18,6 +18,7 @@ public class ClientSetup {
     @SubscribeEvent
     public static void rendererRegister(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(DruidryEntityRegistry.FERTILIZE_PROJECTILE.get(), NoopRenderer::new);
+        event.registerEntityRenderer(DruidryEntityRegistry.BOOMBLOOM_ENTITY.get(), NoopRenderer::new);
     }
 
     @SubscribeEvent

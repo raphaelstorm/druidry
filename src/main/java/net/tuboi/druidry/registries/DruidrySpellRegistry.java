@@ -6,6 +6,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.tuboi.druidry.Druidry;
+import net.tuboi.druidry.spells.BoomBloomSpell;
 import net.tuboi.druidry.spells.FertilizeSpell;
 
 public class DruidrySpellRegistry {
@@ -27,5 +28,5 @@ public class DruidrySpellRegistry {
 
     //Register the spells
     public static final DeferredHolder<AbstractSpell, AbstractSpell> FERTILIZE_SPELL = registerSpell(new FertilizeSpell());
-
+    public static final DeferredHolder<AbstractSpell, AbstractSpell> BOOMBLOOM_SPELL = registerSpell(new BoomBloomSpell());
 }
