@@ -8,6 +8,7 @@ import io.redspace.ironsspellbooks.util.ModTags;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.multiplayer.chat.report.ReportEnvironment;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -34,16 +35,27 @@ public class BoomBloomSpell extends AbstractSpell {
 
     private final ResourceLocation spellId = ResourceLocation.fromNamespaceAndPath(Druidry.MODID, "boombloom");
 
+    @Override
+    public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
+        return List.of(
+                Component.translatable("ui.irons_spellbooks.radius", Math.sqrt(getSpellPower(spellLevel,caster))+2) //Range is equal to power for this spell
+        );
+    }
 
     public BoomBloomSpell() {
         this.manaCostPerLevel = 25;
         this.baseManaCost = 50;
         this.castTime = 5;
-        this.spellPowerPerLevel = 1;
-        this.baseSpellPower = 1;
+        this.spellPowerPerLevel = 4;
+        this.baseSpellPower = 16;
     }
 
-    private final DefaultConfig defaultConfig = new DefaultConfig().setMinRarity(SpellRarity.UNCOMMON).setSchoolResource(SchoolRegistry.NATURE_RESOURCE).setMaxLevel(4).setCooldownSeconds(60d).build();
+    private final DefaultConfig defaultConfig = new DefaultConfig()
+            .setMinRarity(SpellRarity.UNCOMMON)
+            .setSchoolResource(SchoolRegistry.NATURE_RESOURCE)
+            .setMaxLevel(10)
+            .setCooldownSeconds(60d)
+            .build();
 
     @Override
     public ResourceLocation getSpellResource(){

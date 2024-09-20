@@ -1,10 +1,11 @@
 {
   "ui.tubois_druidry.fertilization_per_tick": "%s fertilizer per tick",
   "ui.tubois_druidry.regeneration_applied_seconds": "%s seconds regeneration",
-  "ui.tubois_druidry.boombloom_error_target_flower": "Cast bloomboom at the root of a flower!",
-  "ui.tubois_druidry.boombloom_error_occupied": "A boombloom has already been placed at this location!",
-
 
   "spell.tubois_druidry.fertilize": "Fertilizing Breath",
-  "spell.tubois_druidry.fertilize.guide": "Hold to cast a cone of natural energy, causing plants and soil caught within the cone to rapidly sprout and grow."
+  "spell.tubois_druidry.fertilize.guide": "Hold to cast a cone of natural energy, causing plants and soil caught within the cone to rapidly sprout and grow.",
+
+  "spell.tubois_duridry.boombloom": "Boombloom",
+  "ui.tubois_druidry.boombloom_error_target_flower": "Cast bloomboom at the root of a flower!",
+  "ui.tubois_druidry.boombloom_error_occupied": "A boombloom has already been placed at this location!"
 }

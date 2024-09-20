@@ -45,7 +45,6 @@ public class FertilizeSpell extends AbstractSpell {
 
     private final DefaultConfig defaultConfig = new DefaultConfig().setMinRarity(SpellRarity.COMMON).setSchoolResource(SchoolRegistry.NATURE_RESOURCE).setMaxLevel(5).setCooldownSeconds(5d).build();
 
-
     public float GetRange(float spellpower){
         return spellpower * 1.5f;
     }
