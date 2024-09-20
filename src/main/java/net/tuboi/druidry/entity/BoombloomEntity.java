@@ -11,10 +11,13 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Cow;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
 import net.tuboi.druidry.utils.ParticleHelper;
 import net.tuboi.druidry.utils.Utils;
@@ -197,7 +200,11 @@ public class BoombloomEntity extends Entity {
         //Detonate all nearby boomblooms
         nearbyboomblooms.forEach(boombloomEntity -> boombloomEntity.Detonate());
 
-        //Todo: remove flower block on explosion
+        var flowerBlockstate = level().getBlockState(this.blockPosition());
+        if (this.owner instanceof Player p) {
+            BlockEvent.BreakEvent event = new BlockEvent.BreakEvent(level(), this.blockPosition(), level().getBlockState(this.blockPosition()),p);
+            NeoForge.EVENT_BUS.post(event);
+        }
 
         //Todo: apply damage in sphere
     }
