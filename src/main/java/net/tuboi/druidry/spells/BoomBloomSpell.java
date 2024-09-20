@@ -38,7 +38,8 @@ public class BoomBloomSpell extends AbstractSpell {
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
-                Component.translatable("ui.irons_spellbooks.radius", Math.sqrt(getSpellPower(spellLevel,caster))+2) //Range is equal to power for this spell
+                Component.translatable("ui.irons_spellbooks.radius", Math.sqrt(getSpellPower(spellLevel,caster))+2), //Range is equal to power for this spell
+                Component.translatable("ui.irons_spellbooks.aoe_damage", Math.sqrt(getSpellPower(spellLevel,caster))*4)
         );
     }
 

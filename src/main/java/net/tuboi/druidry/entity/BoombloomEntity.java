@@ -1,5 +1,6 @@
 package net.tuboi.druidry.entity;
 
+import io.redspace.ironsspellbooks.damage.DamageSources;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -19,6 +20,7 @@ import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
+import net.tuboi.druidry.registries.DruidrySpellRegistry;
 import net.tuboi.druidry.utils.ParticleHelper;
 import net.tuboi.druidry.utils.Utils;
 
@@ -206,7 +208,14 @@ public class BoombloomEntity extends Entity {
             NeoForge.EVENT_BUS.post(event);
         }
 
-        //Todo: apply damage in sphere
+        //Fetch all players in explosion radius
+        List<LivingEntity> nearbyEntities = level().getEntitiesOfClass(
+                LivingEntity.class,
+                AABB.ofSize(this.blockPosition().getCenter(),r+0.5,r+0.5,r+0.5)
+        );
+        nearbyEntities.forEach(nearbyEntity -> {
+            DamageSources.applyDamage(nearbyEntity, getDamage(), DruidrySpellRegistry.BOOMBLOOM_SPELL.get().getDamageSource(this,getOwner()));
+        });
     }
 
     private boolean entityDetected(){
@@ -236,6 +245,11 @@ public class BoombloomEntity extends Entity {
 
     private double randomVariation(double number, double variation){
         return number - variation + (random.nextDouble() * 2 * variation);
+    };
+
+    private float getDamage(){
+        //Damage is spellpower squared multiplied by four
+        return (float)Math.sqrt(this.entityData.get(SPELLPOWER))*4;
     };
 
     @Override
