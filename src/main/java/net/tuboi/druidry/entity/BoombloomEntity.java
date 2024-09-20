@@ -214,6 +214,8 @@ public class BoombloomEntity extends Entity {
                 AABB.ofSize(this.blockPosition().getCenter(),r+0.5,r+0.5,r+0.5)
         );
         nearbyEntities.forEach(nearbyEntity -> {
+            //todo: apply force to creature
+
             DamageSources.applyDamage(nearbyEntity, getDamage(), DruidrySpellRegistry.BOOMBLOOM_SPELL.get().getDamageSource(this,getOwner()));
         });
     }
