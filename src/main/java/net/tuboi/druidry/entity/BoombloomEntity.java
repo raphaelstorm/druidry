@@ -11,11 +11,8 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.animal.Cow;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
@@ -268,7 +265,7 @@ public class BoombloomEntity extends Entity {
             //Apply force to entity
             nearbyEntity.setDeltaMovement(originToEntityVec);
 
-            DamageSources.applyDamage(nearbyEntity, getDamage(), DruidrySpellRegistry.BOOMBLOOM_SPELL.get().getDamageSource(this,getOwner()));
+            DamageSources.applyDamage(nearbyEntity, getDamage(), DruidrySpellRegistry.HIDDEN_BOOMBLOOM_SPELL.get().getDamageSource(this,getOwner()));
         });
     }
 

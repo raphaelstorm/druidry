@@ -26,9 +26,9 @@ import java.util.List;
 import java.util.Optional;
 
 @AutoSpellConfig
-public class BoomBloomSpell extends AbstractSpell {
+public class HiddenBoombloomSpell extends AbstractSpell {
 
-    private final ResourceLocation spellId = ResourceLocation.fromNamespaceAndPath(Druidry.MODID, "boombloom");
+    private final ResourceLocation spellId = ResourceLocation.fromNamespaceAndPath(Druidry.MODID, "hidden_boombloom");
 
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
@@ -38,7 +38,7 @@ public class BoomBloomSpell extends AbstractSpell {
                 );
     }
 
-    public BoomBloomSpell() {
+    public HiddenBoombloomSpell() {
         this.manaCostPerLevel = 25;
         this.baseManaCost = 50;
         this.castTime = 40;
