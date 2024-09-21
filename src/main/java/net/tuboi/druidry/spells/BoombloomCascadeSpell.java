@@ -7,18 +7,30 @@ import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
 import io.redspace.ironsspellbooks.api.spells.CastSource;
 import io.redspace.ironsspellbooks.api.spells.CastType;
 import io.redspace.ironsspellbooks.api.spells.SpellRarity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Position;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import net.tuboi.druidry.Druidry;
+import net.tuboi.druidry.entity.BoombloomEntity;
 import net.tuboi.druidry.registries.DruidrySoundRegistry;
 import net.tuboi.druidry.utils.Utils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public class BoombloomCascadeSpell extends AbstractSpell {
 
@@ -36,8 +48,8 @@ public class BoombloomCascadeSpell extends AbstractSpell {
         this.manaCostPerLevel = 100;
         this.baseManaCost = 100;
         this.castTime = 100;
-        this.spellPowerPerLevel = 1;
-        this.baseSpellPower = 1;
+        this.spellPowerPerLevel = 8;
+        this.baseSpellPower = 16;
     }
 
     private final DefaultConfig defaultConfig = new DefaultConfig()
@@ -80,15 +92,77 @@ public class BoombloomCascadeSpell extends AbstractSpell {
 
     @Override
     public void onCast(Level level, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData) {
+        int scanHeight = 10;
+        Double maxDistBetweenBoomblooms = 2.5d;
+        //Get radius of spell (not actually radius but whatever)
+        int radius = (int)Math.ceil(getRadius(getSpellPower(spellLevel, entity)));
 
-        //Gather the blockpositions of all blocks within a cylynder that extends from 10 blocks above to 10 blocks below the player
-        // The radius of the cylynder is determined by the spellpower
-        //level.getBlockStates()
+        BlockPos playerPos = entity.blockPosition();
 
-        //Check each block. If a block is a plantable block, and the block above it is air, shrubbery or a flower, it is eligeble for a boombloom
-        //Save all eligeble locations
+        List<BlockPos> validPositions = new ArrayList<>();
 
-        //Iterate through each eligeble location, and create a boombloom and place a random flower on it if the location is not within another location that contains a boombloom
+        //Get a square of blocks 10 blocks above the player
+        BlockPos seCorner = playerPos.above(scanHeight).south(radius).east(radius);
 
+        for(int i=0;i<radius*2;i++){
+            BlockPos yPos = seCorner.north(i);          //iterate over each row on the north/south axis
+            for(int j=0;j<radius*2;j++){
+                BlockPos xPos = yPos.west(j);           //iterate over each block on the west/east axis
+                for(int k=0;k<scanHeight*2;k++){        //Check all blocks 20 blocks downwards
+                    BlockPos zPos = xPos.below(k);
+                    if( //Check if the block is a flower, leaf, air or crop and has a dirt type block below it
+                        (level.getBlockState(zPos).isAir()
+                        || level.getBlockState(zPos).is(BlockTags.FLOWERS)
+                        || level.getBlockState(zPos).is(BlockTags.LEAVES))
+                        && level.getBlockState(zPos.below(1)).is(BlockTags.DIRT)
+                    ){
+                        validPositions.add(zPos); //Save position if it's valid for a flower placement
+                        continue;
+                    };
+                }
+            }
+        }
+
+        //Remove all valid positions that are within 2 blocks from another valid position
+        for (int i = 0; i < validPositions.size(); i++) {
+            BlockPos blockPos1 = validPositions.get(i);
+            for (int j = i + 1; j < validPositions.size(); j++) {
+                BlockPos blockPos2 = validPositions.get(j);
+                if (blockPos1.getCenter().closerThan(blockPos2.getCenter(), maxDistBetweenBoomblooms)) {
+                    validPositions.remove(j);
+                    j--; // Decrement j since we removed an element, adjusting the index
+                }
+            }
+        }
+
+        //Place a random flower on each eligeble location
+        validPositions.forEach(blockPos -> {
+            //Create blockstate for flower
+            BlockState blockState = Blocks.POPPY.defaultBlockState();
+
+            //Place flower in level
+            level.setBlock(blockPos, blockState, 1);
+
+            //Create a boombloom entity
+            Vec3 position = Vec3.atCenterOf(blockPos);
+
+            //Create a new boombloom at location
+            BoombloomEntity newboombloom = new BoombloomEntity(
+                    level,
+                    entity,
+                    getSpellPower(spellLevel,entity),
+                    position.x,
+                    position.y,
+                    position.z,
+                    true,
+                    2400d, //Alive for 2 minutes
+                    5d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*15)
+            );
+            level.addFreshEntity(newboombloom);
+        });
+    }
+
+    private static Double getRadius(Float spellpower){
+        return (double)spellpower;
     }
 }

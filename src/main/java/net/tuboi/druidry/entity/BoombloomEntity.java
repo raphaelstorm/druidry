@@ -30,7 +30,10 @@ public class BoombloomEntity extends Entity {
 
     private LivingEntity owner; //Player that placed the boombloom
     private Double fuse;
-    private Double fusetime = 20d + Math.ceil(random.nextDouble()*20); //Add random diviation to fuse time
+    private Double fusetime; //Add random diviation to fuse time
+
+    private Double age;
+    private Double lifetime;
 
     private Double timetokill = 0d;
     private boolean removedParticlesDisplayedClientSide = false;
@@ -39,12 +42,14 @@ public class BoombloomEntity extends Entity {
     //Phase can one of the following: STANDBY, TRIGGERED, IGNITED, TICKING, EXPLOSION, DEAD, REMOVED
     private static final EntityDataAccessor<String> PHASE = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Float> SPELLPOWER = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Boolean> EMITPARTICLES = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.BOOLEAN);
+
 
     public BoombloomEntity(EntityType<? extends BoombloomEntity> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
     }
 
-    public BoombloomEntity(Level pLevel, LivingEntity pOwner, Float pSpellpower, double pX, double pY, double pZ) {
+    public BoombloomEntity(Level pLevel, LivingEntity pOwner, Float pSpellpower, double pX, double pY, double pZ, boolean emitParticlesOnStandby, Double lifetime, Double fusetime) {
         this(DruidryEntityRegistry.BOOMBLOOM_ENTITY.get(), pLevel); //Run entity constructor
         this.owner = pOwner;
         this.entityData.set(SPELLPOWER, pSpellpower);
@@ -54,12 +59,18 @@ public class BoombloomEntity extends Entity {
         this.zo = pZ;
         this.fuse = 0d;
         this.setSilent(false);
+        this.entityData.set(EMITPARTICLES, emitParticlesOnStandby);
+        this.lifetime = lifetime;
+        this.age = 0d;
+        this.fusetime = fusetime;
     }
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder pBuilder) {
         pBuilder.define(SPELLPOWER, 0f);
         pBuilder.define(PHASE, Phases.STANDBY);
+        pBuilder.define(EMITPARTICLES, false);
+
     }
 
     public void tick(){
@@ -71,6 +82,15 @@ public class BoombloomEntity extends Entity {
                 timetokill++;
             }else{
                 this.kill();
+            }
+        }
+
+        //Countdown to natural death if a age limit is set
+        if(!level().isClientSide && this.lifetime != null && this.lifetime != 0){
+            if(this.age >= this.lifetime){
+                this.entityData.set(PHASE, Phases.REMOVED);
+            }else{
+                this.age++;
             }
         }
 
@@ -149,6 +169,17 @@ public class BoombloomEntity extends Entity {
             tickingParticles();
         }else if(this.entityData.get(PHASE).equals(Phases.EXPLOSION)){
             explodeParticles();
+        }else if(this.entityData.get(PHASE).equals(Phases.STANDBY) && this.entityData.get(EMITPARTICLES).equals(true)){ //only emit passive particles if on standby and passive emission is enabled
+            passiveParticles();
+        }
+    }
+
+    private void passiveParticles(){
+        if(this.random.nextDouble() > 0.95){
+            this.level().addParticle(ParticleTypes.FLAME, randomVariation(this.xo,0.2), randomVariation(this.yo,0.2), randomVariation(this.zo,0.2),
+                    (random.nextDouble()*0.1)-0.05,
+                    (random.nextDouble()*0.2),
+                    (random.nextDouble()*0.1)-0.05);
         }
     }
 
@@ -186,12 +217,11 @@ public class BoombloomEntity extends Entity {
         float particleSpeedVariationScalar = baseParticleSpeed*0.1f; //Scale speed by +-10 percent
 
         //Add some explosion particles
-        for(int i = 0; i<Math.floor(this.entityData.get(SPELLPOWER)) / 10 ;i++){
-            this.level().addParticle(ParticleTypes.EXPLOSION_EMITTER, randomVariation(this.xo,0.05), randomVariation(this.yo,0.05), randomVariation(this.zo,0.05),
-                    0,
-                    0,
-                    0);
-        }
+        this.level().addParticle(ParticleTypes.EXPLOSION_EMITTER, randomVariation(this.xo,0.05), randomVariation(this.yo,0.05), randomVariation(this.zo,0.05),
+                0,
+                0,
+                0);
+
 
         //Create particles
         for(int i = 0; i<particleamount; i++){

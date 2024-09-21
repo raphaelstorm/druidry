@@ -24,6 +24,8 @@ import net.tuboi.druidry.utils.Utils;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
+import java.util.RandomAccess;
 
 @AutoSpellConfig
 public class HiddenBoombloomSpell extends AbstractSpell {
@@ -117,6 +119,7 @@ public class HiddenBoombloomSpell extends AbstractSpell {
 
         Vec3 position = Vec3.atCenterOf(pos.getBlockPos().above(1));
 
+
         //Create a new boombloom at location
         var newboombloom = new BoombloomEntity(
                 level,
@@ -124,7 +127,10 @@ public class HiddenBoombloomSpell extends AbstractSpell {
                 getSpellPower(spellLevel,entity),
                 position.x,
                 position.y,
-                position.z
+                position.z,
+                false,
+                0d, //Permanent
+                20d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*20)
         );
         level.addFreshEntity(newboombloom);
     }
