@@ -81,5 +81,14 @@ public class BoombloomCascadeSpell extends AbstractSpell {
     @Override
     public void onCast(Level level, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData) {
 
+        //Gather the blockpositions of all blocks within a cylynder that extends from 10 blocks above to 10 blocks below the player
+        // The radius of the cylynder is determined by the spellpower
+        //level.getBlockStates()
+
+        //Check each block. If a block is a plantable block, and the block above it is air, shrubbery or a flower, it is eligeble for a boombloom
+        //Save all eligeble locations
+
+        //Iterate through each eligeble location, and create a boombloom and place a random flower on it if the location is not within another location that contains a boombloom
+
     }
 }
