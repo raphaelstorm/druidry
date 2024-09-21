@@ -4,9 +4,7 @@ import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
 import io.redspace.ironsspellbooks.api.spells.*;
-import io.redspace.ironsspellbooks.api.util.Utils;
 import io.redspace.ironsspellbooks.entity.spells.AbstractConeProjectile;
-import io.redspace.ironsspellbooks.registries.SoundRegistry;
 import io.redspace.ironsspellbooks.spells.EntityCastData;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -17,6 +15,7 @@ import net.minecraft.world.level.Level;
 import net.tuboi.druidry.Druidry;
 import net.tuboi.druidry.entity.FertilizeProjectile;
 import net.tuboi.druidry.registries.DruidrySoundRegistry;
+import net.tuboi.druidry.utils.Utils;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,7 +27,7 @@ public class FertilizeSpell extends AbstractSpell {
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
-                Component.translatable("ui.irons_spellbooks.cast_range",GetRange(getSpellPower(spellLevel, caster))), //Range is equal to power for this spell
+                Component.translatable("ui.irons_spellbooks.cast_range", Utils.SetMaxDecimals((double)getSpellPower(spellLevel, caster), 1)), //Range is equal to power for this spell
                 Component.translatable("ui.tubois_druidry.fertilization_per_tick", GetFertilizerPerSecond(getSpellPower(spellLevel, caster))),
                 Component.translatable("ui.tubois_druidry.regeneration_applied_seconds", (int)getSpellPower(spellLevel, caster))
         );

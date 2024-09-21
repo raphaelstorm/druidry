@@ -4,9 +4,7 @@ import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
 import io.redspace.ironsspellbooks.api.spells.*;
-import io.redspace.ironsspellbooks.util.ModTags;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.multiplayer.chat.report.ReportEnvironment;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
@@ -15,12 +13,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.tuboi.druidry.Druidry;
 import net.tuboi.druidry.entity.BoombloomEntity;
@@ -38,24 +33,24 @@ public class BoomBloomSpell extends AbstractSpell {
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
-                Component.translatable("ui.irons_spellbooks.radius", Math.sqrt(getSpellPower(spellLevel,caster))+2), //Range is equal to power for this spell
-                Component.translatable("ui.irons_spellbooks.aoe_damage", Math.sqrt(getSpellPower(spellLevel,caster))*4)
-        );
+                Component.translatable("ui.irons_spellbooks.radius", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))+2),1)), //Range is equal to power for this spell
+                Component.translatable("ui.irons_spellbooks.aoe_damage", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))*2),1))
+                );
     }
 
     public BoomBloomSpell() {
         this.manaCostPerLevel = 25;
         this.baseManaCost = 50;
-        this.castTime = 5;
+        this.castTime = 40;
         this.spellPowerPerLevel = 4;
         this.baseSpellPower = 16;
     }
 
     private final DefaultConfig defaultConfig = new DefaultConfig()
-            .setMinRarity(SpellRarity.UNCOMMON)
+            .setMinRarity(SpellRarity.COMMON)
             .setSchoolResource(SchoolRegistry.NATURE_RESOURCE)
             .setMaxLevel(10)
-            .setCooldownSeconds(60d)
+            .setCooldownSeconds(5d)
             .build();
 
     @Override

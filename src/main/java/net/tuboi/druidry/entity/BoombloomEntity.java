@@ -21,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
+import net.tuboi.druidry.registries.DruidrySoundRegistry;
 import net.tuboi.druidry.registries.DruidrySpellRegistry;
 import net.tuboi.druidry.utils.ParticleHelper;
 import net.tuboi.druidry.utils.Utils;
@@ -33,6 +34,10 @@ public class BoombloomEntity extends Entity {
     private LivingEntity owner; //Player that placed the boombloom
     private Double fuse;
     private Double fusetime = 20d + Math.ceil(random.nextDouble()*20); //Add random diviation to fuse time
+
+    private Double timetokill = 0d;
+    private boolean removedParticlesDisplayedClientSide = false;
+
 
     //Phase can one of the following: STANDBY, TRIGGERED, IGNITED, TICKING, EXPLOSION, DEAD, REMOVED
     private static final EntityDataAccessor<String> PHASE = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.STRING);
@@ -65,23 +70,25 @@ public class BoombloomEntity extends Entity {
 
         //Kill on serverside if dead
         if(!level().isClientSide && this.entityData.get(PHASE).equals(Phases.DEAD)){
-            this.kill();
+            if(timetokill<5d){ //wait before killing entity, giving client side time to display particles
+                timetokill++;
+            }else{
+                this.kill();
+            }
         }
 
         //Check if flower block is still present on serverside
-        if(!level().isClientSide() && !level().getBlockState(blockPosition()).is(BlockTags.FLOWERS)){
+        if(!level().isClientSide() && !level().getBlockState(blockPosition()).is(BlockTags.FLOWERS) && !this.entityData.get(PHASE).equals(Phases.REMOVED)){
             this.entityData.set(PHASE, Phases.REMOVED);
         }
 
         //Check if a player or hostile entity that is not the caster exists within X blocks
-        if(!level().isClientSide() && entityDetected()){
-            if(this.entityData.get(PHASE).equals(Phases.STANDBY)){
-                this.entityData.set(PHASE, Phases.TRIGGERED);
-            }
+        if(!level().isClientSide() && entityDetected() && this.entityData.get(PHASE).equals(Phases.STANDBY)){
+            this.entityData.set(PHASE, Phases.TRIGGERED);
         }
 
         //Handle phase changes on server side
-        if(!level().isClientSide() && !this.entityData.get(PHASE).equals(Phases.STANDBY) && !this.entityData.get(PHASE).equals(Phases.REMOVED)){
+        if(!level().isClientSide() && !this.entityData.get(PHASE).equals(Phases.STANDBY) && !this.entityData.get(PHASE).equals(Phases.REMOVED) && !this.entityData.get(PHASE).equals(Phases.DEAD)){
             String phase = this.entityData.get(PHASE);
 
             if(this.fuse == 0 || phase.equals(Phases.TRIGGERED)){ //Upon fuse countdown start, change phase from TRIGGERED to IGNITED
@@ -122,6 +129,7 @@ public class BoombloomEntity extends Entity {
     protected void PlaySounds(){
         if(this.entityData.get(PHASE).equals(Phases.REMOVED)){ //Effects when flower is removed / defused
             this.playSound(SoundEvents.LAVA_EXTINGUISH);
+            this.playSound(DruidrySoundRegistry.WINDY_LEAVES.value());
         }else if(this.entityData.get(PHASE).equals(Phases.IGNITED)){ //Effects right after flower was triggered
             //todo: create custom sound event for ignition
             this.playSound(SoundEvents.TNT_PRIMED);
@@ -130,12 +138,14 @@ public class BoombloomEntity extends Entity {
         }else if(this.entityData.get(PHASE).equals(Phases.EXPLOSION)){
             //Play explosion sound
             this.playSound(SoundEvents.GENERIC_EXPLODE.value());
+            this.playSound(DruidrySoundRegistry.WINDY_LEAVES.value());
         }
     }
 
     protected void SpawnParticles(){
-        if(this.entityData.get(PHASE).equals(Phases.REMOVED)){ //Effects when flower is removed / defused
+        if(this.entityData.get(PHASE).equals(Phases.REMOVED) || this.entityData.get(PHASE).equals(Phases.DEAD) && !this.removedParticlesDisplayedClientSide){ //Effects when flower is removed / defused
             removedParticles();
+            removedParticlesDisplayedClientSide = true;
         }else if(this.entityData.get(PHASE).equals(Phases.IGNITED)){ //Effects right after flower was triggered
             ignitedParticles();
         }else if (this.entityData.get(PHASE).equals(Phases.TICKING)){ //Particle effects while flower is ticking down
@@ -148,9 +158,9 @@ public class BoombloomEntity extends Entity {
     private void removedParticles(){
         for(int i = 0; i < 30; i++){
             this.level().addParticle(ParticleTypes.WHITE_SMOKE, randomVariation(this.xo,0.2), randomVariation(this.yo,0.2), randomVariation(this.zo,0.2),
-                    0,
-                    0,
-                    0);
+                    (random.nextDouble()*0.1)-0.05,
+                    (random.nextDouble()*0.5),
+                    (random.nextDouble()*0.1)-0.05);
         }
     }
 
@@ -174,9 +184,17 @@ public class BoombloomEntity extends Entity {
 
     private void explodeParticles(){
         double explosionradius = getExplosionRadius(this.entityData.get(SPELLPOWER)); //Get explosion radius
-        double particleamount = getParticleCount(explosionradius,100); //Get amount of particles
+        double particleamount = getParticleCount(explosionradius,50); //Get amount of particles
         float baseParticleSpeed = Utils.GetParticleSpeedNeededForTravelDistance(explosionradius, 0.1f,20);
         float particleSpeedVariationScalar = baseParticleSpeed*0.1f; //Scale speed by +-10 percent
+
+        //Add some explosion particles
+        for(int i = 0; i<Math.floor(this.entityData.get(SPELLPOWER)) / 10 ;i++){
+            this.level().addParticle(ParticleTypes.EXPLOSION_EMITTER, randomVariation(this.xo,0.05), randomVariation(this.yo,0.05), randomVariation(this.zo,0.05),
+                    0,
+                    0,
+                    0);
+        }
 
         //Create particles
         for(int i = 0; i<particleamount; i++){
@@ -190,6 +208,20 @@ public class BoombloomEntity extends Entity {
                     speeds[0],
                     speeds[1],
                     speeds[2]);
+
+            if(random.nextDouble() >= 0.75){
+                this.level().addParticle(ParticleHelper.FERTILIZER_EMITTER, randomVariation(this.xo,0.05), randomVariation(this.yo,0.05), randomVariation(this.zo,0.05),
+                        speeds[0],
+                        speeds[1],
+                        speeds[2]);
+            }
+
+            if(random.nextDouble() >= 0.75){
+                this.level().addParticle(ParticleTypes.WHITE_SMOKE, randomVariation(this.xo,0.05), randomVariation(this.yo,0.05), randomVariation(this.zo,0.05),
+                        speeds[0],
+                        speeds[1],
+                        speeds[2]);
+            }
         }
     }
 
@@ -285,7 +317,7 @@ public class BoombloomEntity extends Entity {
 
     private float getDamage(){
         //Damage is spellpower squared multiplied by four
-        return (float)Math.sqrt(this.entityData.get(SPELLPOWER))*4;
+        return (float)Math.sqrt(this.entityData.get(SPELLPOWER))*2;
     };
 
     public interface Phases{
@@ -296,6 +328,7 @@ public class BoombloomEntity extends Entity {
         String EXPLOSION = "EXPLOSION";
         String DEAD = "DEAD";
         String REMOVED = "REMOVED";
+        String CLIENTREMOVED = "CLIENTREMOVED";
     }
 
     @Override

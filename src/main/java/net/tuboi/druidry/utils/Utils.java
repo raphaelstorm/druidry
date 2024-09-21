@@ -70,4 +70,10 @@ public class Utils {
         // Return speeds as an array
         return new double[]{speedX, speedY, speedZ};
     }
+
+    // Function to limit the decimal places using Math library
+    public static double SetMaxDecimals(double value, int maxDecimals) {
+        double scale = Math.pow(10, maxDecimals);
+        return Math.round(value * scale) / scale;
+    }
 }
