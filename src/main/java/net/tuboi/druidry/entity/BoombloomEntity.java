@@ -17,6 +17,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
@@ -172,7 +173,7 @@ public class BoombloomEntity extends Entity {
     }
 
     private void explodeParticles(){
-        float explosionradius = getExplosionRadius(this.entityData.get(SPELLPOWER)); //Get explosion radius
+        double explosionradius = getExplosionRadius(this.entityData.get(SPELLPOWER)); //Get explosion radius
         double particleamount = getParticleCount(explosionradius,100); //Get amount of particles
         float baseParticleSpeed = Utils.GetParticleSpeedNeededForTravelDistance(explosionradius, 0.1f,20);
         float particleSpeedVariationScalar = baseParticleSpeed*0.1f; //Scale speed by +-10 percent
@@ -195,7 +196,7 @@ public class BoombloomEntity extends Entity {
     private void explodeLogic(){
 
         //Get all blooms within explosionradius and trigger them as well
-        float r = getExplosionRadius(this.entityData.get(SPELLPOWER)); //Get detection radius
+        double r = getExplosionRadius(this.entityData.get(SPELLPOWER)); //Get detection radius
 
         //Fetch all other boomblooms around this one
         List<BoombloomEntity> nearbyboomblooms = level().getEntitiesOfClass(
@@ -218,10 +219,39 @@ public class BoombloomEntity extends Entity {
                 AABB.ofSize(this.blockPosition().getCenter(),r+0.5,r+0.5,r+0.5)
         );
         nearbyEntities.forEach(nearbyEntity -> {
-            //todo: apply force to creature
+
+            //todo: the force doesn't scale right, don't know whats wrong but it seems to set the same output force regardless of spellpower
+            //Create a vector between the boombloom and the struck entity
+            Vec3 originToEntityVec = this.position().vectorTo(nearbyEntity.position()).normalize();
+
+            //Get force from distance
+            double pushforce = calcInverseDistanceForce(
+                    this.position().distanceTo(nearbyEntity.position()),
+                    this.entityData.get(SPELLPOWER)*100,
+                    getExplosionRadius(entityData.get(SPELLPOWER))); //Multiply output force by 4
+
+            //Scale the vector to be equal to the spellpower squared and squared again by the distance
+            originToEntityVec.scale(pushforce);
+
+            //Apply force to entity
+            nearbyEntity.setDeltaMovement(originToEntityVec);
 
             DamageSources.applyDamage(nearbyEntity, getDamage(), DruidrySpellRegistry.BOOMBLOOM_SPELL.get().getDamageSource(this,getOwner()));
         });
+    }
+
+    private static double calcInverseDistanceForce(double distance, double spellPower, double explosionRadius) {
+        // If the entity is outside the explosion radius, apply no force
+        if (distance > explosionRadius) {
+            return 0;
+        }
+
+        if(distance < 1){ //Prevent crazy application of force from standing in the same spot as the explosion
+            distance = 1;
+        }
+
+        // Calculate force using inverse square law (force decreases with square of distance)
+        return spellPower / (distance * distance);
     }
 
     private boolean entityDetected(){
@@ -236,13 +266,13 @@ public class BoombloomEntity extends Entity {
         return !entitiesWithinDetectionRange.isEmpty();
     }
 
-    private double getParticleCount(float radius, int baseParticles) {
+    private double getParticleCount(double radius, int baseParticles) {
         // baseParticles is the number of particles you want at radius 1
         return Math.round(baseParticles * radius * radius);
     }
 
-    private float getExplosionRadius(float spellpower){
-        return Math.round(Math.sqrt(spellpower)); //Radius starts out at 4, and slowly increase with the square of the spell power.
+    private double getExplosionRadius(float spellpower){
+        return Math.sqrt(spellpower); //Radius starts out at 4, and slowly increase with the square of the spell power.
     }
 
     private float getDetectionRadius(float spellpower){
