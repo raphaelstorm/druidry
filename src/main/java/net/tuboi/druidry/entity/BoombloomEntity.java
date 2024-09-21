@@ -31,6 +31,7 @@ public class BoombloomEntity extends Entity {
 
     private LivingEntity owner; //Player that placed the boombloom
     private Double fuse;
+    private Double fusetime = 20d + Math.ceil(random.nextDouble()*20); //Add random diviation to fuse time
 
     //Phase can one of the following: STANDBY, TRIGGERED, IGNITED, TICKING, EXPLOSION, DEAD, REMOVED
     private static final EntityDataAccessor<String> PHASE = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.STRING);
@@ -55,44 +56,47 @@ public class BoombloomEntity extends Entity {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder pBuilder) {
         pBuilder.define(SPELLPOWER, 0f);
-        pBuilder.define(PHASE, "STANDBY");
+        pBuilder.define(PHASE, Phases.STANDBY);
     }
 
     public void tick(){
         super.tick();
 
         //Kill on serverside if dead
-        if(!level().isClientSide && this.entityData.get(PHASE) == "DEAD"){
+        if(!level().isClientSide && this.entityData.get(PHASE).equals(Phases.DEAD)){
             this.kill();
         }
 
         //Check if flower block is still present on serverside
         if(!level().isClientSide() && !level().getBlockState(blockPosition()).is(BlockTags.FLOWERS)){
-            this.entityData.set(PHASE, "REMOVED");
+            this.entityData.set(PHASE, Phases.REMOVED);
         }
 
         //Check if a player or hostile entity that is not the caster exists within X blocks
         if(!level().isClientSide() && entityDetected()){
-            if(this.entityData.get(PHASE).equals("STANDBY")){
-                this.entityData.set(PHASE, "TRIGGERED");
+            if(this.entityData.get(PHASE).equals(Phases.STANDBY)){
+                this.entityData.set(PHASE, Phases.TRIGGERED);
             }
         }
 
         //Handle phase changes on server side
-        if(!level().isClientSide() && !this.entityData.get(PHASE).equals("STANDBY")&&!level().isClientSide() && !this.entityData.get(PHASE).equals("REMOVED")){
-            this.fuse++;
-            //Bloom explodes 40ticks / 2 seconds after being set
-            double fusetime = 20d;
-            fusetime += Math.ceil(random.nextDouble()*20); //Add random diviation to fuse time
-            if(this.fuse == 1){ //Upon fuse countdown start, change phase from TRIGGERED to IGNITED
-                this.entityData.set(PHASE, "IGNITED");
-            }else if (this.fuse > 1 && this.fuse < fusetime && !this.entityData.get(PHASE).equals("TICKING")){ //On later ticks, set phase to TICKING if not already set
-                this.entityData.set(PHASE, "TICKING");
-            }else if(this.fuse.equals(fusetime) && !this.entityData.get(PHASE).equals("EXPLOSION")){
-                this.entityData.set(PHASE, "EXPLOSION");
+        if(!level().isClientSide() && !this.entityData.get(PHASE).equals(Phases.STANDBY) && !this.entityData.get(PHASE).equals(Phases.REMOVED)){
+            String phase = this.entityData.get(PHASE);
+
+            if(this.fuse == 0 || phase.equals(Phases.TRIGGERED)){ //Upon fuse countdown start, change phase from TRIGGERED to IGNITED
+                this.entityData.set(PHASE, Phases.IGNITED);
+                this.fuse++;
+            }else if (this.fuse > 0 && this.fuse < fusetime || phase.equals(Phases.IGNITED)){ //On later ticks, set phase to TICKING if not already set
+                if(phase.equals(Phases.IGNITED)){
+                    this.entityData.set(PHASE, Phases.TICKING);
+                }
+                this.fuse++;
+            }else if(this.fuse >= fusetime && phase.equals(Phases.TICKING)){
+                this.entityData.set(PHASE, Phases.EXPLOSION);
                 explodeLogic();
-            }else if(this.fuse > fusetime && !this.entityData.get(PHASE).equals("DEAD")){
-                this.entityData.set(PHASE, "DEAD");
+                this.fuse++;
+            }else if(this.fuse >= fusetime && phase.equals(Phases.EXPLOSION)){
+                this.entityData.set(PHASE, Phases.DEAD);
             }
         }
 
@@ -103,39 +107,39 @@ public class BoombloomEntity extends Entity {
             PlaySounds(); //Play sounds server side (for some reason)
         }
 
-        if(!level().isClientSide() && this.entityData.get(PHASE).equals("REMOVED")){
-            this.entityData.set(PHASE, "DEAD");
+        if(!level().isClientSide() && this.entityData.get(PHASE).equals(Phases.REMOVED)){
+            this.entityData.set(PHASE, Phases.DEAD);
         }
     }
 
     public void Detonate(){
-        if(!level().isClientSide && this.entityData.get(PHASE).equals("STANDBY")){
-            this.entityData.set(PHASE,"TRIGGERED");
+        if(!level().isClientSide && this.entityData.get(PHASE).equals(Phases.STANDBY)){
+            this.entityData.set(PHASE,Phases.TRIGGERED);
         }
     }
 
     protected void PlaySounds(){
-        if(this.entityData.get(PHASE).equals("REMOVED")){ //Effects when flower is removed / defused
+        if(this.entityData.get(PHASE).equals(Phases.REMOVED)){ //Effects when flower is removed / defused
             this.playSound(SoundEvents.LAVA_EXTINGUISH);
-        }else if(this.entityData.get(PHASE).equals("IGNITED")){ //Effects right after flower was triggered
+        }else if(this.entityData.get(PHASE).equals(Phases.IGNITED)){ //Effects right after flower was triggered
             //todo: create custom sound event for ignition
             this.playSound(SoundEvents.TNT_PRIMED);
-        }else if (this.entityData.get(PHASE).equals("TICKING")){ //Particle effects while flower is ticking down
+        }else if (this.entityData.get(PHASE).equals(Phases.TICKING)){ //Particle effects while flower is ticking down
             //no sound for now
-        }else if(this.entityData.get(PHASE).equals("EXPLOSION")){
+        }else if(this.entityData.get(PHASE).equals(Phases.EXPLOSION)){
             //Play explosion sound
             this.playSound(SoundEvents.GENERIC_EXPLODE.value());
         }
     }
 
     protected void SpawnParticles(){
-        if(this.entityData.get(PHASE).equals("REMOVED")){ //Effects when flower is removed / defused
+        if(this.entityData.get(PHASE).equals(Phases.REMOVED)){ //Effects when flower is removed / defused
             removedParticles();
-        }else if(this.entityData.get(PHASE).equals("IGNITED")){ //Effects right after flower was triggered
+        }else if(this.entityData.get(PHASE).equals(Phases.IGNITED)){ //Effects right after flower was triggered
             ignitedParticles();
-        }else if (this.entityData.get(PHASE).equals("TICKING")){ //Particle effects while flower is ticking down
+        }else if (this.entityData.get(PHASE).equals(Phases.TICKING)){ //Particle effects while flower is ticking down
             tickingParticles();
-        }else if(this.entityData.get(PHASE).equals("EXPLOSION")){
+        }else if(this.entityData.get(PHASE).equals(Phases.EXPLOSION)){
             explodeParticles();
         }
     }
@@ -144,7 +148,7 @@ public class BoombloomEntity extends Entity {
         for(int i = 0; i < 30; i++){
             this.level().addParticle(ParticleTypes.WHITE_SMOKE, randomVariation(this.xo,0.2), randomVariation(this.yo,0.2), randomVariation(this.zo,0.2),
                     0,
-                    (random.nextDouble()*0.1)-0.05,
+                    0,
                     0);
         }
     }
@@ -253,6 +257,16 @@ public class BoombloomEntity extends Entity {
         //Damage is spellpower squared multiplied by four
         return (float)Math.sqrt(this.entityData.get(SPELLPOWER))*4;
     };
+
+    public interface Phases{
+        String STANDBY = "STANDBY";
+        String TRIGGERED = "TRIGGERED";
+        String IGNITED = "IGNITED";
+        String TICKING = "TICKING";
+        String EXPLOSION = "EXPLOSION";
+        String DEAD = "DEAD";
+        String REMOVED = "REMOVED";
+    }
 
     @Override
     protected void readAdditionalSaveData(CompoundTag pCompound) {
