@@ -168,9 +168,9 @@ public class BoombloomCascadeSpell extends AbstractSpell {
                     position.y,
                     position.z,
                     true,
-                    2400d, //Alive for 2 minutes
+                    2100d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*600), //Alive for 2 minutes
                     5d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*15),
-                    10d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*20)
+                    40d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*40)
             );
             level.addFreshEntity(newboombloom);
         });

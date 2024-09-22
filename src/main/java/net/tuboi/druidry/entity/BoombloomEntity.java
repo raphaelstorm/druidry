@@ -1,11 +1,15 @@
 package net.tuboi.druidry.entity;
 
 import io.redspace.ironsspellbooks.damage.DamageSources;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Entity;
@@ -24,23 +28,30 @@ import net.tuboi.druidry.utils.Utils;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 public class BoombloomEntity extends Entity {
 
-    private Player owner; //Player that placed the boombloom
+    //Local fields for server side
     private Double fuse = 0d;
-    private Double fuseTime = 40d; //Add random diviation to fuse time
     private Double age= 0d;
-    private Double lifeTime = 0d;
     private Double timeToKill = 0d;
-    private boolean removedParticlesDisplayedClientSide = false;
+    private Double armingTickCounterServer = 0d;
 
-    //Phase can one of the following: STANDBY, TRIGGERED, IGNITED, TICKING, EXPLOSION, DEAD, REMOVED
+    //Local fields for client side
+    private boolean removedParticlesDisplayedClientSide = false;
+    private Double armingTickCounterClient = 0d;
+
+    //Synced fields
     private static final EntityDataAccessor<String> PHASE = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Float> SPELLPOWER = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> EMITPARTICLES = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Integer> TIMETOARM = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> ARMINGTIMER = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> ARMINGTIME = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> FUSETIME = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> LIFETIME = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Optional<UUID>> OWNER_UUID = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.OPTIONAL_UUID);
+
 
     // #################################################################################################################
     // CONSTRUCTOR STUFF
@@ -50,30 +61,29 @@ public class BoombloomEntity extends Entity {
         super(pEntityType, pLevel);
     }
 
-    public BoombloomEntity(Level pLevel, Player pOwner, Float pSpellpower, double pX, double pY, double pZ, boolean emitParticlesOnStandby, Double lifetime, Double fusetime, Double timeToArm) {
+    public BoombloomEntity(Level pLevel, Player pOwner, Float pSpellpower, double pX, double pY, double pZ, boolean emitParticlesOnStandby, Double lifetime, Double fusetime, Double armingTime) {
         this(DruidryEntityRegistry.BOOMBLOOM_ENTITY.get(), pLevel); //Run entity constructor
-        this.owner = pOwner;
+        this.entityData.set(OWNER_UUID, Optional.of(pOwner.getUUID()));
         this.entityData.set(SPELLPOWER, pSpellpower);
         this.setPos(pX, pY, pZ);
         this.xo = pX;
         this.yo = pY;
         this.zo = pZ;
-        this.fuse = 0d;
-        this.setSilent(false);
         this.entityData.set(EMITPARTICLES, emitParticlesOnStandby);
-        this.lifeTime = lifetime;
-        this.age = 0d;
-        this.fuseTime = fusetime;
-        this.entityData.set(TIMETOARM, timeToArm.intValue());
+        this.entityData.set(LIFETIME, lifetime.intValue());
+        this.entityData.set(FUSETIME, fusetime.intValue());
+        this.entityData.set(ARMINGTIME, armingTime.intValue());
     }
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder pBuilder) {
         pBuilder.define(SPELLPOWER, 0f);
-        pBuilder.define(PHASE, Phases.ARMED);
+        pBuilder.define(PHASE, Phases.UNARMED);
         pBuilder.define(EMITPARTICLES, false);
-        pBuilder.define(TIMETOARM, 40);
-        pBuilder.define(ARMINGTIMER, 0);
+        pBuilder.define(ARMINGTIME, 40);
+        pBuilder.define(FUSETIME, 40);
+        pBuilder.define(LIFETIME, 0);
+        pBuilder.define(OWNER_UUID, Optional.empty());
     }
 
     // #################################################################################################################
@@ -93,8 +103,9 @@ public class BoombloomEntity extends Entity {
         }
 
         //Countdown to natural death if a age limit is set
-        if(!level().isClientSide && this.lifeTime != null && this.lifeTime != 0){
-            if(this.age >= this.lifeTime){
+        Integer lifeTime = this.entityData.get(LIFETIME);
+        if(!level().isClientSide && lifeTime != 0){
+            if(this.age >= lifeTime){
                 this.entityData.set(PHASE, Phases.DEFUSED);
             }else{
                 this.age++;
@@ -113,13 +124,11 @@ public class BoombloomEntity extends Entity {
 
         //Handle arming period
         if(this.entityData.get(PHASE).equals(Phases.UNARMED)){
-            if(level().isClientSide){
-                armingParticles((double)this.entityData.get(ARMINGTIMER), (double)this.entityData.get(TIMETOARM));
-            }else{
-                if(this.entityData.get(ARMINGTIMER) > this.entityData.get(TIMETOARM)){ //Check if arming sequence is over
+            if(!level().isClientSide){
+                if(this.armingTickCounterServer > this.entityData.get(ARMINGTIME)){ //Check if arming sequence is over
                     this.entityData.set(PHASE, Phases.ARMED); //If yes, arm flower
                 }else{
-                    this.entityData.set(ARMINGTIMER,this.entityData.get(ARMINGTIMER)+1); //If not, increase timer
+                    this.armingTickCounterServer++; //If not, increase timer
                 }
             }
         }
@@ -127,7 +136,7 @@ public class BoombloomEntity extends Entity {
         //Handle phase changes on server side
         if(!level().isClientSide() && !this.entityData.get(PHASE).equals(Phases.ARMED) && !this.entityData.get(PHASE).equals(Phases.DEFUSED) && !this.entityData.get(PHASE).equals(Phases.DEAD)&& !this.entityData.get(PHASE).equals(Phases.UNARMED)){
             String phase = this.entityData.get(PHASE);
-
+            Integer fuseTime = this.entityData.get(FUSETIME);
             if(this.fuse == 0 || phase.equals(Phases.TRIGGERED)){ //Upon fuse countdown start, change phase from TRIGGERED to IGNITED
                 this.entityData.set(PHASE, Phases.IGNITED);
                 this.fuse++;
@@ -195,8 +204,10 @@ public class BoombloomEntity extends Entity {
             //Apply force to entity
             nearbyEntity.setDeltaMovement(originToEntityVec);
 
-            DamageSources.applyDamage(nearbyEntity, getDamage(), DruidrySpellRegistry.HIDDEN_BOOMBLOOM_SPELL.get().getDamageSource(this,getOwner()));
-        });
+            if(getOwner().isPresent()) {
+                DamageSources.applyDamage(nearbyEntity, getDamage(), DruidrySpellRegistry.HIDDEN_BOOMBLOOM_SPELL.get().getDamageSource(this, getOwner().get()));
+            }
+            });
     }
 
     private boolean entityDetected(){
@@ -210,7 +221,7 @@ public class BoombloomEntity extends Entity {
 
         //Remove the owner from the list
         for(int i=0;i<entitiesWithinDetectionRange.size();i++){
-            if(entitiesWithinDetectionRange.get(i).equals(owner)){
+            if(getOwner().isPresent() && entitiesWithinDetectionRange.get(i).equals(getOwner().get())){
                 entitiesWithinDetectionRange.remove(i);
                 i--;
             }
@@ -255,6 +266,9 @@ public class BoombloomEntity extends Entity {
             explodeParticles();
         }else if(this.entityData.get(PHASE).equals(Phases.ARMED) && this.entityData.get(EMITPARTICLES).equals(true)){ //only emit passive particles if on standby and passive emission is enabled
             passiveParticles();
+        }else if(this.entityData.get(PHASE).equals(Phases.UNARMED) && armingTickCounterClient <= this.entityData.get(ARMINGTIME)) { //Check if arming sequence is over
+            armingParticles(armingTickCounterClient, (double)this.entityData.get(ARMINGTIME));
+            armingTickCounterClient++;
         }
     }
 
@@ -273,6 +287,12 @@ public class BoombloomEntity extends Entity {
                     (random.nextDouble()*0.1)-0.05,
                     (random.nextDouble()*0.5),
                     (random.nextDouble()*0.1)-0.05);
+        }
+        for(int i = 0; i < 10; i++){
+            this.level().addParticle(ParticleHelper.FLOWER_EMITTER, randomVariation(this.xo,0.2), randomVariation(this.yo,0.2), randomVariation(this.zo,0.2),
+                    (random.nextDouble()*0.1)-0.03,
+                    (random.nextDouble()*0.3),
+                    (random.nextDouble()*0.1)-0.03);
         }
     }
 
@@ -337,23 +357,45 @@ public class BoombloomEntity extends Entity {
         //As timer reaches 100%, the flowers will move more slowly away, as well as spawning closer to the center
         //As the timer completes, the flowers spawn in the center and does not move
 
-        Double maxDist = 2d;
-        Double maxSpeed = 2d;
+        Double maxDist = 1.5d;
         Double progress = (totalTicks-currentTick)/totalTicks;
-        Double baseParticleCount = 30d;
+        Double baseParticleCount = 5d;
         Double particleCount = Math.pow((maxDist*progress)*baseParticleCount,2);
 
         //Get particle speed and spawn distance
-        Double speed = maxSpeed*progress;
-        Double distance = maxDist*progress;
+        Double speed = maxDist*progress;
+
+        if (getOwner().isPresent() && getOwner().get() instanceof ServerPlayer serverPlayer) {
+            serverPlayer.connection.send(new ClientboundSetActionBarTextPacket(Component.translatable("ui.irons_spellbooks.radius",particleCount).withStyle(ChatFormatting.RED)));
+        }
 
         for(int i = 0; i<particleCount; i++){
             double[] xyzSpeeds = Utils.GetVectorSpeeds(speed);
-            Double randomScalar = (random.nextDouble()*0.5)+0.5;
-            this.level().addParticle(ParticleHelper.FERTILIZER_EMITTER, xyzSpeeds[0], xyzSpeeds[1], xyzSpeeds[2],
+            while(xyzSpeeds[1]<=0){
+                xyzSpeeds = Utils.GetVectorSpeeds(speed);
+            }
+
+            Double randomScalar = 0.05*((random.nextDouble()*0.25)+0.75);
+            this.level().addParticle(ParticleHelper.FERTILIZER_EMITTER, this.xo+xyzSpeeds[0]*0.5, this.yo+xyzSpeeds[1]*2, this.zo+xyzSpeeds[2]*0.5,
                     xyzSpeeds[0]*randomScalar,
-                    xyzSpeeds[1]*randomScalar,
+                    xyzSpeeds[1]*randomScalar*2,
                     xyzSpeeds[2]*randomScalar);
+        }
+
+        //Create burst of particles on final tick
+        if(currentTick.equals(totalTicks)){
+            for(int i = 0; i < 20; i++){
+                this.level().addParticle(ParticleHelper.FLOWER_EMITTER, randomVariation(this.xo,0.05), randomVariation(this.yo,0.05), randomVariation(this.zo,0.05),
+                        (random.nextDouble()*0.5)-0.25,
+                        random.nextDouble()*0.25,
+                        (random.nextDouble()*0.5)-0.25);
+            }
+            for(int i = 0; i < 10; i++){
+                this.level().addParticle(ParticleTypes.FLAME, randomVariation(this.xo,0.05), randomVariation(this.yo,0.05), randomVariation(this.zo,0.05),
+                        (random.nextDouble()*0.3)-0.15,
+                        random.nextDouble()*0.4,
+                        (random.nextDouble()*0.3)-0.15);
+            }
         }
     }
 
@@ -429,7 +471,15 @@ public class BoombloomEntity extends Entity {
     }
 
     @Nullable
-    public LivingEntity getOwner() {
-        return this.owner;
+    public Optional<LivingEntity> getOwner() {
+        if(this.entityData.get(OWNER_UUID).isPresent()){
+            if(level().getPlayerByUUID(this.entityData.get(OWNER_UUID).get()) != null){
+                return Optional.ofNullable(level().getPlayerByUUID(this.entityData.get(OWNER_UUID).get()));
+            }else{
+                return Optional.empty();
+            }
+        }else{
+            return Optional.empty();
+        }
     }
 }

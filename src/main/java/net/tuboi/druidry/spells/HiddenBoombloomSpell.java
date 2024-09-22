@@ -135,7 +135,7 @@ public class HiddenBoombloomSpell extends AbstractSpell {
                 false,
                 0d,
                 20d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*20),
-                20d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*20)
+                100d
         );
         level.addFreshEntity(newboombloom);
     }
