@@ -199,20 +199,6 @@ public class BoombloomEntity extends Entity {
         });
     }
 
-    private static double calcInverseDistanceForce(double distance, double spellPower, double explosionRadius) {
-        // If the entity is outside the explosion radius, apply no force
-        if (distance > explosionRadius) {
-            return 0;
-        }
-
-        if(distance < 1){ //Prevent crazy application of force from standing in the same spot as the explosion
-            distance = 1;
-        }
-
-        // Calculate force using inverse square law (force decreases with square of distance)
-        return spellPower / (distance * distance);
-    }
-
     private boolean entityDetected(){
         float dr = getDetectionRadius(this.entityData.get(SPELLPOWER)); //Get detection radius
 
@@ -375,6 +361,17 @@ public class BoombloomEntity extends Entity {
     // HELPERS
     // #################################################################################################################
 
+    public interface Phases{
+        String UNARMED = "UNARMED";
+        String ARMED = "ARMED";
+        String TRIGGERED = "TRIGGERED";
+        String IGNITED = "IGNITED";
+        String TICKING = "TICKING";
+        String EXPLOSION = "EXPLOSION";
+        String DEAD = "DEAD";
+        String DEFUSED = "DEFUSED";
+    }
+
     private double getParticleCount(double radius, int baseParticles) {
         // baseParticles is the number of particles you want at radius 1
         return Math.round(baseParticles * radius * radius);
@@ -397,15 +394,18 @@ public class BoombloomEntity extends Entity {
         return (float)Math.sqrt(this.entityData.get(SPELLPOWER))*2;
     };
 
-    public interface Phases{
-        String UNARMED = "UNARMED";
-        String ARMED = "ARMED";
-        String TRIGGERED = "TRIGGERED";
-        String IGNITED = "IGNITED";
-        String TICKING = "TICKING";
-        String EXPLOSION = "EXPLOSION";
-        String DEAD = "DEAD";
-        String DEFUSED = "DEFUSED";
+    private static double calcInverseDistanceForce(double distance, double spellPower, double explosionRadius) {
+        // If the entity is outside the explosion radius, apply no force
+        if (distance > explosionRadius) {
+            return 0;
+        }
+
+        if(distance < 1){ //Prevent crazy application of force from standing in the same spot as the explosion
+            distance = 1;
+        }
+
+        // Calculate force using inverse square law (force decreases with square of distance)
+        return spellPower / (distance * distance);
     }
 
     // #################################################################################################################
