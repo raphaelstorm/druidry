@@ -46,7 +46,8 @@ public class BoombloomCascadeSpell extends AbstractSpell {
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
                 Component.translatable("ui.irons_spellbooks.radius", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))+2),1)), //Range is equal to power for this spell
-                Component.translatable("ui.irons_spellbooks.aoe_damage", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))*2),1))
+                Component.translatable("ui.irons_spellbooks.aoe_damage", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))*2),1)),
+                Component.translatable("ui.irons_spellbooks.cast_range", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))/2),1))
         );
     }
 
@@ -59,7 +60,7 @@ public class BoombloomCascadeSpell extends AbstractSpell {
     }
 
     private final DefaultConfig defaultConfig = new DefaultConfig()
-            .setMinRarity(SpellRarity.EPIC)
+            .setMinRarity(SpellRarity.RARE)
             .setSchoolResource(SchoolRegistry.NATURE_RESOURCE)
             .setMaxLevel(3)
             .setCooldownSeconds(120d)
@@ -145,17 +146,8 @@ public class BoombloomCascadeSpell extends AbstractSpell {
             return;
         }
 
-        List<Block> allFlowerTypes = Utils.GetFlowerBlocks();
-
-        //Place a random flower on each eligeble location
+        //Place a boombloom on each location
         validPositions.forEach(blockPos -> {
-
-            //Create blockstate for a random flower
-            BlockState blockState = Utils.GetRandomNormalFlower().defaultBlockState();
-
-            //Place flower in level
-            level.setBlockAndUpdate(blockPos, blockState);
-
             //Create a boombloom entity
             Vec3 position = Vec3.atCenterOf(blockPos);
 
@@ -170,13 +162,14 @@ public class BoombloomCascadeSpell extends AbstractSpell {
                     true,
                     2100d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*600), //Alive for 2 minutes
                     5d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*15),
-                    40d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*40)
+                    40d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*160),
+                    1d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*7)
             );
             level.addFreshEntity(newboombloom);
         });
     }
 
     private static Double getRadius(Float spellpower){
-        return (double)spellpower;
+        return (double)spellpower/2;
     }
 }

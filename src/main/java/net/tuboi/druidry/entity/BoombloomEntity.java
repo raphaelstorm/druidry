@@ -18,6 +18,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
@@ -51,6 +52,7 @@ public class BoombloomEntity extends Entity {
     private static final EntityDataAccessor<Integer> FUSETIME = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> LIFETIME = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Optional<UUID>> OWNER_UUID = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.OPTIONAL_UUID);
+    private static final EntityDataAccessor<Float> SPAWN_PARTICLE_HEIGHT = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.FLOAT);
 
 
     // #################################################################################################################
@@ -61,7 +63,7 @@ public class BoombloomEntity extends Entity {
         super(pEntityType, pLevel);
     }
 
-    public BoombloomEntity(Level pLevel, Player pOwner, Float pSpellpower, double pX, double pY, double pZ, boolean emitParticlesOnStandby, Double lifetime, Double fusetime, Double armingTime) {
+    public BoombloomEntity(Level pLevel, Player pOwner, Float pSpellpower, double pX, double pY, double pZ, boolean emitParticlesOnStandby, Double lifetime, Double fusetime, Double armingTime, Double spawnParticleHeight) {
         this(DruidryEntityRegistry.BOOMBLOOM_ENTITY.get(), pLevel); //Run entity constructor
         this.entityData.set(OWNER_UUID, Optional.of(pOwner.getUUID()));
         this.entityData.set(SPELLPOWER, pSpellpower);
@@ -73,6 +75,7 @@ public class BoombloomEntity extends Entity {
         this.entityData.set(LIFETIME, lifetime.intValue());
         this.entityData.set(FUSETIME, fusetime.intValue());
         this.entityData.set(ARMINGTIME, armingTime.intValue());
+        this.entityData.set(SPAWN_PARTICLE_HEIGHT, spawnParticleHeight.floatValue());
     }
 
     @Override
@@ -82,8 +85,9 @@ public class BoombloomEntity extends Entity {
         pBuilder.define(EMITPARTICLES, false);
         pBuilder.define(ARMINGTIME, 40);
         pBuilder.define(FUSETIME, 40);
-        pBuilder.define(LIFETIME, 0);
+        pBuilder.define(LIFETIME, 2400);
         pBuilder.define(OWNER_UUID, Optional.empty());
+        pBuilder.define(SPAWN_PARTICLE_HEIGHT, 3f);
     }
 
     // #################################################################################################################
@@ -126,6 +130,18 @@ public class BoombloomEntity extends Entity {
         if(this.entityData.get(PHASE).equals(Phases.UNARMED)){
             if(!level().isClientSide){
                 if(this.armingTickCounterServer > this.entityData.get(ARMINGTIME)){ //Check if arming sequence is over
+                    //Check if there is a flower on the boomblooms location, if not, create one
+                    if(!level().getBlockState(this.blockPosition()).is(BlockTags.FLOWERS)){
+
+                        //Check that the block below is dirt and that this block is air or grass
+                        if(!level().getBlockState(this.blockPosition().below()).is(BlockTags.DIRT) || !level().getBlockState(this.blockPosition()).isEmpty())
+                        {
+                            this.entityData.set(PHASE, Phases.DEFUSED);
+                        }
+
+                        BlockState newFlower = Utils.GetRandomNormalFlower().defaultBlockState();
+                        level().setBlockAndUpdate(this.blockPosition(), newFlower);
+                    }
                     this.entityData.set(PHASE, Phases.ARMED); //If yes, arm flower
                 }else{
                     this.armingTickCounterServer++; //If not, increase timer
@@ -357,10 +373,9 @@ public class BoombloomEntity extends Entity {
         //As timer reaches 100%, the flowers will move more slowly away, as well as spawning closer to the center
         //As the timer completes, the flowers spawn in the center and does not move
 
-        Double maxDist = 1.5d;
+        Double maxDist = this.entityData.get(SPAWN_PARTICLE_HEIGHT).doubleValue();
         Double progress = (totalTicks-currentTick)/totalTicks;
-        Double baseParticleCount = 5d;
-        Double particleCount = Math.pow((maxDist*progress)*baseParticleCount,2);
+        Double particleCount = 2d;
 
         //Get particle speed and spawn distance
         Double speed = maxDist*progress;
@@ -370,16 +385,11 @@ public class BoombloomEntity extends Entity {
         }
 
         for(int i = 0; i<particleCount; i++){
-            double[] xyzSpeeds = Utils.GetVectorSpeeds(speed);
-            while(xyzSpeeds[1]<=0){
-                xyzSpeeds = Utils.GetVectorSpeeds(speed);
-            }
-
-            Double randomScalar = 0.05*((random.nextDouble()*0.25)+0.75);
-            this.level().addParticle(ParticleHelper.FERTILIZER_EMITTER, this.xo+xyzSpeeds[0]*0.5, this.yo+xyzSpeeds[1]*2, this.zo+xyzSpeeds[2]*0.5,
-                    xyzSpeeds[0]*randomScalar,
-                    xyzSpeeds[1]*randomScalar*2,
-                    xyzSpeeds[2]*randomScalar);
+            Double randomScalar = 0.1*((random.nextDouble()*0.25)+0.75);
+            this.level().addParticle(ParticleHelper.FERTILIZER_EMITTER, this.xo+(random.nextDouble()*0.1)-0.05, this.yo+speed, this.zo+(random.nextDouble()*0.1)-0.05,
+                    (random.nextDouble()*0.1)-0.05,
+                    speed*randomScalar,
+                    (random.nextDouble()*0.1)-0.05);
         }
 
         //Create burst of particles on final tick
