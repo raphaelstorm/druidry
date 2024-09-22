@@ -13,6 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -119,18 +120,22 @@ public class HiddenBoombloomSpell extends AbstractSpell {
 
         Vec3 position = Vec3.atCenterOf(pos.getBlockPos().above(1));
 
+        if(!(entity instanceof Player)){
+            return;
+        }
 
         //Create a new boombloom at location
         var newboombloom = new BoombloomEntity(
                 level,
-                entity,
+                (Player)entity,
                 getSpellPower(spellLevel,entity),
                 position.x,
                 position.y,
                 position.z,
                 false,
-                0d, //Permanent
-                20d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*20)
+                0d,
+                20d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*20),
+                20d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*20)
         );
         level.addFreshEntity(newboombloom);
     }

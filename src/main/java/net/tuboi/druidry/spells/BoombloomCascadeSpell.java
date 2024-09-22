@@ -8,14 +8,19 @@ import io.redspace.ironsspellbooks.api.spells.CastSource;
 import io.redspace.ironsspellbooks.api.spells.CastType;
 import io.redspace.ironsspellbooks.api.spells.SpellRarity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Position;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -30,6 +35,7 @@ import net.tuboi.druidry.utils.Utils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class BoombloomCascadeSpell extends AbstractSpell {
@@ -135,13 +141,20 @@ public class BoombloomCascadeSpell extends AbstractSpell {
             }
         }
 
+        if(!(entity instanceof Player)){
+            return;
+        }
+
+        List<Block> allFlowerTypes = Utils.GetFlowerBlocks();
+
         //Place a random flower on each eligeble location
         validPositions.forEach(blockPos -> {
-            //Create blockstate for flower
-            BlockState blockState = Blocks.POPPY.defaultBlockState();
+
+            //Create blockstate for a random flower
+            BlockState blockState = Utils.GetRandomNormalFlower().defaultBlockState();
 
             //Place flower in level
-            level.setBlock(blockPos, blockState, 1);
+            level.setBlockAndUpdate(blockPos, blockState);
 
             //Create a boombloom entity
             Vec3 position = Vec3.atCenterOf(blockPos);
@@ -149,14 +162,15 @@ public class BoombloomCascadeSpell extends AbstractSpell {
             //Create a new boombloom at location
             BoombloomEntity newboombloom = new BoombloomEntity(
                     level,
-                    entity,
+                    (Player)entity,
                     getSpellPower(spellLevel,entity),
                     position.x,
                     position.y,
                     position.z,
                     true,
                     2400d, //Alive for 2 minutes
-                    5d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*15)
+                    5d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*15),
+                    10d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*20)
             );
             level.addFreshEntity(newboombloom);
         });

@@ -1,12 +1,21 @@
 package net.tuboi.druidry.utils;
 
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class Utils {
 
@@ -75,5 +84,33 @@ public class Utils {
     public static double SetMaxDecimals(double value, int maxDecimals) {
         double scale = Math.pow(10, maxDecimals);
         return Math.round(value * scale) / scale;
+    }
+
+    public static List<Block> GetFlowerBlocks() {
+        TagKey<Block> flowerTag = BlockTags.SMALL_FLOWERS; // Assuming there's already a FLOWERS tag
+        return BuiltInRegistries.BLOCK.getTag(flowerTag)
+                .map(tag -> tag.stream().map(Holder::value).collect(Collectors.toList()))
+                .orElse(List.of()); // Return empty list if no blocks found
+    }
+
+    public static Block GetRandomNormalFlower(){
+        List<Block> flowers = new ArrayList<>();
+
+        flowers.add(Blocks.POPPY);
+        flowers.add(Blocks.ORANGE_TULIP);
+        flowers.add(Blocks.RED_TULIP);
+        flowers.add(Blocks.WHITE_TULIP);
+        flowers.add(Blocks.DANDELION);
+        flowers.add(Blocks.PINK_TULIP);
+        flowers.add(Blocks.ALLIUM);
+        flowers.add(Blocks.AZURE_BLUET);
+        flowers.add(Blocks.BLUE_ORCHID);
+        flowers.add(Blocks.CORNFLOWER);
+        flowers.add(Blocks.LILY_OF_THE_VALLEY);
+        flowers.add(Blocks.OXEYE_DAISY);
+
+        int randomIndex = (int)Math.floor(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*flowers.size());
+
+        return flowers.get(randomIndex);
     }
 }
