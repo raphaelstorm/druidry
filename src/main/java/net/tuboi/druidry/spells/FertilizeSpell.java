@@ -73,6 +73,11 @@ public class FertilizeSpell extends AbstractSpell {
     }
 
     @Override
+    public Optional<SoundEvent> getCastStartSound() {
+        return Optional.of(DruidrySoundRegistry.NATURE_CAST_START.get());
+    }
+
+    @Override
     public void onCast(Level world, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData){
         if ( //If projectile already exists
                 playerMagicData.isCasting()
