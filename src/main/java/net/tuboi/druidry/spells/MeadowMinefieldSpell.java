@@ -8,25 +8,15 @@ import io.redspace.ironsspellbooks.api.spells.CastSource;
 import io.redspace.ironsspellbooks.api.spells.CastType;
 import io.redspace.ironsspellbooks.api.spells.SpellRarity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.Position;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.level.BlockEvent;
 import net.tuboi.druidry.Druidry;
 import net.tuboi.druidry.entity.BoombloomEntity;
 import net.tuboi.druidry.registries.DruidrySoundRegistry;
@@ -35,26 +25,25 @@ import net.tuboi.druidry.utils.Utils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-public class BoombloomCascadeSpell extends AbstractSpell {
+public class MeadowMinefieldSpell extends AbstractSpell {
 
-    private final ResourceLocation spellId = ResourceLocation.fromNamespaceAndPath(Druidry.MODID, "boombloom_cascade");
+    private final ResourceLocation spellId = ResourceLocation.fromNamespaceAndPath(Druidry.MODID, "meadow_minefield");
 
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
-                Component.translatable("ui.irons_spellbooks.radius", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))+2),1)), //Range is equal to power for this spell
-                Component.translatable("ui.irons_spellbooks.aoe_damage", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))*2),1)),
-                Component.translatable("ui.irons_spellbooks.cast_range", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))/2),1))
+                Component.translatable("ui.tubois_druidry.boombloom_explosion_radius", Utils.SetMaxDecimals(Math.sqrt(getSpellPower(spellLevel,caster)-8),1)), //Range is equal to power for this spell
+                Component.translatable("ui.irons_spellbooks.aoe_damage", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster)-8)*2),1)),
+                Component.translatable("ui.tubois_druidry.boombloom_radius", Utils.SetMaxDecimals((getSpellPower(spellLevel,caster))/2,1)),
+                Component.translatable("ui.tubois_druidry.boombloom_detection_radius", Utils.SetMaxDecimals(Math.sqrt(getSpellPower(spellLevel,caster)-8)/4,1))
         );
     }
 
-    public BoombloomCascadeSpell() {
+    public MeadowMinefieldSpell() {
         this.manaCostPerLevel = 100;
         this.baseManaCost = 100;
-        this.castTime = 100;
+        this.castTime = 80;
         this.spellPowerPerLevel = 8;
         this.baseSpellPower = 16;
     }
@@ -62,8 +51,8 @@ public class BoombloomCascadeSpell extends AbstractSpell {
     private final DefaultConfig defaultConfig = new DefaultConfig()
             .setMinRarity(SpellRarity.RARE)
             .setSchoolResource(SchoolRegistry.NATURE_RESOURCE)
-            .setMaxLevel(3)
-            .setCooldownSeconds(120d)
+            .setMaxLevel(5)
+            .setCooldownSeconds(180d)
             .build();
 
 
@@ -84,12 +73,12 @@ public class BoombloomCascadeSpell extends AbstractSpell {
     @Override
     public Optional<SoundEvent> getCastFinishSound() {
         //todo: make proper sound
-        return Optional.of(DruidrySoundRegistry.WINDY_LEAVES.get());
+        return Optional.of(DruidrySoundRegistry.NATURE_CAST_END.get());
     }
 
     @Override
     public Optional<SoundEvent> getCastStartSound() {
-        return Optional.of(DruidrySoundRegistry.WINDY_LEAVES.get());
+        return Optional.of(DruidrySoundRegistry.NATURE_CAST_START.get());
     }
 
     @Override
@@ -101,34 +90,32 @@ public class BoombloomCascadeSpell extends AbstractSpell {
     public void onCast(Level level, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData) {
         int scanHeight = 10;
         Double maxDistBetweenBoomblooms = 2.5d;
-        //Get radius of spell (not actually radius but whatever)
+
+        //Get radius of spell
         int radius = (int)Math.ceil(getRadius(getSpellPower(spellLevel, entity)));
 
-        BlockPos playerPos = entity.blockPosition();
-
+        //Array to store valid positions to summon boomblooms
         List<BlockPos> validPositions = new ArrayList<>();
 
-        //Get a square of blocks 10 blocks above the player
-        BlockPos seCorner = playerPos.above(scanHeight).south(radius).east(radius);
+        //Get a circle of blocks 10 blocks above the player
+        List<BlockPos> blockCircle = Utils.GetBlocksInRadius(entity.blockPosition().above(10),radius);
 
-        for(int i=0;i<radius*2;i++){
-            BlockPos yPos = seCorner.north(i);          //iterate over each row on the north/south axis
-            for(int j=0;j<radius*2;j++){
-                BlockPos xPos = yPos.west(j);           //iterate over each block on the west/east axis
-                for(int k=0;k<scanHeight*2;k++){        //Check all blocks 20 blocks downwards
-                    BlockPos zPos = xPos.below(k);
-                    if( //Check if the block is a flower, leaf, air or crop and has a dirt type block below it
+
+        //Iterate over each block in the circle
+        blockCircle.forEach(blockPos -> {
+            for(int k=0;k<scanHeight*2;k++){        //Check all blocks 20 blocks downwards
+                BlockPos zPos = blockPos.below(k);
+                if( //Check if the block is a flower, leaf, air or crop and has a dirt type block below it
                         (level.getBlockState(zPos).isAir()
-                        || level.getBlockState(zPos).is(BlockTags.FLOWERS)
-                        || level.getBlockState(zPos).is(BlockTags.LEAVES))
-                        && level.getBlockState(zPos.below(1)).is(BlockTags.DIRT)
-                    ){
-                        validPositions.add(zPos); //Save position if it's valid for a flower placement
-                        continue;
-                    };
-                }
+                                || level.getBlockState(zPos).is(BlockTags.FLOWERS)
+                                || level.getBlockState(zPos).is(BlockTags.LEAVES))
+                                && level.getBlockState(zPos.below(1)).is(BlockTags.DIRT)
+                ){
+                    validPositions.add(zPos); //Save position if it's valid for a flower placement
+                    continue;
+                };
             }
-        }
+        });
 
         //Remove all valid positions that are within 2 blocks from another valid position
         for (int i = 0; i < validPositions.size(); i++) {
@@ -155,14 +142,13 @@ public class BoombloomCascadeSpell extends AbstractSpell {
             BoombloomEntity newboombloom = new BoombloomEntity(
                     level,
                     (Player)entity,
-                    getSpellPower(spellLevel,entity),
+                    getSpellPower(spellLevel,entity)-8,
                     position.x,
                     position.y,
                     position.z,
                     true,
-                    2100d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*600), //Alive for 2 minutes
-                    5d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*15),
-                    40d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*160),
+                    2100d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*600),
+                    80d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*160),
                     1d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*7)
             );
             level.addFreshEntity(newboombloom);

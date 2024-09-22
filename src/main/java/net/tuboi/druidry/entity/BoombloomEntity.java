@@ -39,6 +39,8 @@ public class BoombloomEntity extends Entity {
     private Double age= 0d;
     private Double timeToKill = 0d;
     private Double armingTickCounterServer = 0d;
+    private boolean armingSoundPlayed = false;
+    private boolean armedSoundPlayed = false;
 
     //Local fields for client side
     private boolean removedParticlesDisplayedClientSide = false;
@@ -63,7 +65,7 @@ public class BoombloomEntity extends Entity {
         super(pEntityType, pLevel);
     }
 
-    public BoombloomEntity(Level pLevel, Player pOwner, Float pSpellpower, double pX, double pY, double pZ, boolean emitParticlesOnStandby, Double lifetime, Double fusetime, Double armingTime, Double spawnParticleHeight) {
+    public BoombloomEntity(Level pLevel, Player pOwner, Float pSpellpower, double pX, double pY, double pZ, boolean emitParticlesOnStandby, Double lifetime, Double armingTime, Double spawnParticleHeight) {
         this(DruidryEntityRegistry.BOOMBLOOM_ENTITY.get(), pLevel); //Run entity constructor
         this.entityData.set(OWNER_UUID, Optional.of(pOwner.getUUID()));
         this.entityData.set(SPELLPOWER, pSpellpower);
@@ -73,7 +75,6 @@ public class BoombloomEntity extends Entity {
         this.zo = pZ;
         this.entityData.set(EMITPARTICLES, emitParticlesOnStandby);
         this.entityData.set(LIFETIME, lifetime.intValue());
-        this.entityData.set(FUSETIME, fusetime.intValue());
         this.entityData.set(ARMINGTIME, armingTime.intValue());
         this.entityData.set(SPAWN_PARTICLE_HEIGHT, spawnParticleHeight.floatValue());
     }
@@ -84,7 +85,7 @@ public class BoombloomEntity extends Entity {
         pBuilder.define(PHASE, Phases.UNARMED);
         pBuilder.define(EMITPARTICLES, false);
         pBuilder.define(ARMINGTIME, 40);
-        pBuilder.define(FUSETIME, 40);
+        pBuilder.define(FUSETIME, 30);
         pBuilder.define(LIFETIME, 2400);
         pBuilder.define(OWNER_UUID, Optional.empty());
         pBuilder.define(SPAWN_PARTICLE_HEIGHT, 3f);
@@ -252,17 +253,28 @@ public class BoombloomEntity extends Entity {
 
     protected void PlaySounds(){
         if(this.entityData.get(PHASE).equals(Phases.DEFUSED)){ //Effects when flower is removed / defused
-            this.playSound(SoundEvents.LAVA_EXTINGUISH);
+            this.playSound(SoundEvents.FIRE_EXTINGUISH);
             this.playSound(DruidrySoundRegistry.WINDY_LEAVES.value());
         }else if(this.entityData.get(PHASE).equals(Phases.IGNITED)){ //Effects right after flower was triggered
-            //todo: create custom sound event for ignition
-            this.playSound(SoundEvents.TNT_PRIMED);
+            this.playSound(DruidrySoundRegistry.BOOMBLOOM_TRIGGER.get(), 4, 0.99f+random.nextFloat()*0.2f);
         }else if (this.entityData.get(PHASE).equals(Phases.TICKING)){ //Particle effects while flower is ticking down
-            //no sound for now
+            if(this.random.nextDouble()>=0.95){//1 in 20 chanse of playing windy leaves sound. Avg 1 play per second
+                this.playSound(DruidrySoundRegistry.WINDY_LEAVES.value());
+            }
         }else if(this.entityData.get(PHASE).equals(Phases.EXPLOSION)){
             //Play explosion sound
             this.playSound(SoundEvents.GENERIC_EXPLODE.value());
             this.playSound(DruidrySoundRegistry.WINDY_LEAVES.value());
+        }else if(this.entityData.get(PHASE).equals(Phases.UNARMED) && !this.armingSoundPlayed && (this.entityData.get(ARMINGTIME) - this.armingTickCounterServer <= 80)){ //Play sound when arming occurs in four seconds (synced with audio for cool effect)
+            this.playSound(DruidrySoundRegistry.BOOMBLOOM_ARMED.value(), 4, 0.99f+random.nextFloat()*0.2f);
+            this.armingSoundPlayed = true;
+        }else if(this.entityData.get(PHASE).equals(Phases.UNARMED)){
+            if(this.random.nextDouble()>=0.95){//1 in 20 chanse of playing windy leaves sound. Avg 1 play per second
+                this.playSound(DruidrySoundRegistry.WINDY_LEAVES.value());
+            }
+        }else if(this.entityData.get(PHASE).equals(Phases.ARMED) && !this.armedSoundPlayed){
+            this.playSound(SoundEvents.FIREWORK_ROCKET_BLAST, 4, 0.99f+random.nextFloat()*0.2f);
+            this.armedSoundPlayed = true;
         }
     }
 

@@ -1,5 +1,6 @@
 package net.tuboi.druidry.utils;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.BlockTags;
@@ -112,5 +113,31 @@ public class Utils {
         int randomIndex = (int)Math.floor(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*flowers.size());
 
         return flowers.get(randomIndex);
+    }
+
+    /**
+     * Returns a list of BlockPos within a given horizontal radius around a center block.
+     *
+     * @param center The center BlockPos
+     * @param radius The radius around the center block (horizontal distance)
+     * @return List of BlockPos within the radius (including the perimeter)
+     */
+    public static List<BlockPos> GetBlocksInRadius(BlockPos center, int radius) {
+        List<BlockPos> blocksInRadius = new ArrayList<>();
+        int centerX = center.getX();
+        int centerY = center.getY();
+        int centerZ = center.getZ();
+
+        // Iterate over a square grid centered at the input block
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                // Use Pythagoras' theorem to check if the block is within the radius
+                if (x * x + z * z <= radius * radius) {
+                    blocksInRadius.add(new BlockPos(centerX + x, centerY, centerZ + z));
+                }
+            }
+        }
+
+        return blocksInRadius;
     }
 }

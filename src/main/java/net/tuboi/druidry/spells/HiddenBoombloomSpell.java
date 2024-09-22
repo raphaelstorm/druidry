@@ -74,12 +74,12 @@ public class HiddenBoombloomSpell extends AbstractSpell {
     @Override
     public Optional<SoundEvent> getCastFinishSound() {
         //todo: make proper sound
-        return Optional.of(DruidrySoundRegistry.WINDY_LEAVES.get());
+        return Optional.of(DruidrySoundRegistry.NATURE_CAST_END.get());
     }
 
     @Override
     public Optional<SoundEvent> getCastStartSound() {
-        return Optional.of(DruidrySoundRegistry.WINDY_LEAVES.get());
+        return Optional.of(DruidrySoundRegistry.NATURE_CAST_START.get());
     }
 
     @Override
@@ -134,8 +134,7 @@ public class HiddenBoombloomSpell extends AbstractSpell {
                 position.z,
                 false,
                 0d,
-                20d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*20),
-                100d,
+                80d,
                 5d
         );
         level.addFreshEntity(newboombloom);

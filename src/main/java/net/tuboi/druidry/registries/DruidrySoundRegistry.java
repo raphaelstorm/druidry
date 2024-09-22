@@ -17,6 +17,10 @@ public class DruidrySoundRegistry {
     }
 
     public static DeferredHolder<SoundEvent, SoundEvent> WINDY_LEAVES = registerSoundEvent("spell.windy_leaves.loop");
+    public static DeferredHolder<SoundEvent, SoundEvent> BOOMBLOOM_TRIGGER = registerSoundEvent("entity.boombloom.trigger");
+    public static DeferredHolder<SoundEvent, SoundEvent> BOOMBLOOM_ARMED = registerSoundEvent("entity.boombloom.armed");
+    public static DeferredHolder<SoundEvent, SoundEvent> NATURE_CAST_START = registerSoundEvent("spell.boombloom.start");
+    public static DeferredHolder<SoundEvent, SoundEvent> NATURE_CAST_END = registerSoundEvent("spell.boombloom.end");
 
 
 
