@@ -40,7 +40,7 @@ public class BoombloomEntity extends Entity {
     private Double timeToKill = 0d;
     private Double armingTickCounterServer = 0d;
     private boolean armingSoundPlayed = false;
-    private boolean armedSoundPlayed = false;
+    private boolean armedSoundPlayed = true; //Default to true to avoid annoying sound replay on load
 
     //Local fields for client side
     private boolean removedParticlesDisplayedClientSide = false;
@@ -79,6 +79,7 @@ public class BoombloomEntity extends Entity {
         this.entityData.set(ARMINGTIME, armingTime.intValue());
         this.entityData.set(SPAWN_PARTICLE_HEIGHT, spawnParticleHeight.floatValue());
         this.entityData.set(SPAWN_DELAY, spawnDelay);
+        this.armedSoundPlayed = false;
     }
 
     @Override
