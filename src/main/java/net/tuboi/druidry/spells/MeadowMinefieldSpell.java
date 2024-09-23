@@ -31,9 +31,9 @@ public class MeadowMinefieldSpell extends AbstractSpell {
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
-                Component.translatable("ui.tubois_druidry.boombloom_explosion_radius", Utils.SetMaxDecimals(Math.sqrt(getSpellPower(spellLevel,caster)-8),1)), //Range is equal to power for this spell
+                Component.translatable("ui.tubois_druidry.boombloom_radius", Utils.SetMaxDecimals(getRadius(getSpellPower(spellLevel,caster)),1)),
+                Component.translatable("ui.tubois_druidry.boombloom_explosion_radius", Utils.SetMaxDecimals(Math.sqrt(getSpellPower(1,caster)-8),1)), //Range is equal to power for this spell
                 Component.translatable("ui.irons_spellbooks.aoe_damage", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(1,caster)-8)*2),1)),
-                Component.translatable("ui.tubois_druidry.boombloom_radius", Utils.SetMaxDecimals(getRadius(getSpellPower(1,caster)),1)),
                 Component.translatable("ui.tubois_druidry.boombloom_detection_radius", Utils.SetMaxDecimals(Math.sqrt(getSpellPower(1,caster)-8)/4,1))
         );
     }
