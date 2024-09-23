@@ -3,10 +3,7 @@ package net.tuboi.druidry.spells;
 import io.redspace.ironsspellbooks.api.config.DefaultConfig;
 import io.redspace.ironsspellbooks.api.magic.MagicData;
 import io.redspace.ironsspellbooks.api.registry.SchoolRegistry;
-import io.redspace.ironsspellbooks.api.spells.AbstractSpell;
-import io.redspace.ironsspellbooks.api.spells.CastSource;
-import io.redspace.ironsspellbooks.api.spells.CastType;
-import io.redspace.ironsspellbooks.api.spells.SpellRarity;
+import io.redspace.ironsspellbooks.api.spells.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -26,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@AutoSpellConfig
 public class MeadowMinefieldSpell extends AbstractSpell {
 
     private final ResourceLocation spellId = ResourceLocation.fromNamespaceAndPath(Druidry.MODID, "meadow_minefield");
@@ -34,9 +32,9 @@ public class MeadowMinefieldSpell extends AbstractSpell {
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
                 Component.translatable("ui.tubois_druidry.boombloom_explosion_radius", Utils.SetMaxDecimals(Math.sqrt(getSpellPower(spellLevel,caster)-8),1)), //Range is equal to power for this spell
-                Component.translatable("ui.irons_spellbooks.aoe_damage", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster)-8)*2),1)),
-                Component.translatable("ui.tubois_druidry.boombloom_radius", Utils.SetMaxDecimals((getSpellPower(spellLevel,caster))/2,1)),
-                Component.translatable("ui.tubois_druidry.boombloom_detection_radius", Utils.SetMaxDecimals(Math.sqrt(getSpellPower(spellLevel,caster)-8)/4,1))
+                Component.translatable("ui.irons_spellbooks.aoe_damage", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(1,caster)-8)*2),1)),
+                Component.translatable("ui.tubois_druidry.boombloom_radius", Utils.SetMaxDecimals(getRadius(getSpellPower(1,caster)),1)),
+                Component.translatable("ui.tubois_druidry.boombloom_detection_radius", Utils.SetMaxDecimals(Math.sqrt(getSpellPower(1,caster)-8)/4,1))
         );
     }
 
@@ -138,24 +136,29 @@ public class MeadowMinefieldSpell extends AbstractSpell {
             //Create a boombloom entity
             Vec3 position = Vec3.atCenterOf(blockPos);
 
+            //Calculate spawndelay based on distance to caster. 1 second per 4 blocks away from caster.
+            Double spawnDelay = position.distanceTo(entity.position())*5;
+
+
             //Create a new boombloom at location
             BoombloomEntity newboombloom = new BoombloomEntity(
                     level,
                     (Player)entity,
-                    getSpellPower(spellLevel,entity)-8,
+                    getSpellPower(1,entity), //Created boomblooms are always level 1
                     position.x,
                     position.y,
                     position.z,
                     true,
                     2100d + Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*600),
                     80d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*160),
-                    1d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*7)
+                    1d+Math.ceil(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*7),
+                    (int)Math.ceil((spawnDelay*0.9)+(io.redspace.ironsspellbooks.api.util.Utils.random.nextDouble()*spawnDelay*0.2)) //Apply +-10 percent variation in spawndelay
             );
             level.addFreshEntity(newboombloom);
         });
     }
 
     private static Double getRadius(Float spellpower){
-        return (double)spellpower/2;
+        return (double)spellpower/4 + Math.sqrt(spellpower);
     }
 }

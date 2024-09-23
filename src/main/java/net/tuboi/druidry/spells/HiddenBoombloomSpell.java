@@ -25,8 +25,6 @@ import net.tuboi.druidry.utils.Utils;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
-import java.util.RandomAccess;
 
 @AutoSpellConfig
 public class HiddenBoombloomSpell extends AbstractSpell {
@@ -36,15 +34,16 @@ public class HiddenBoombloomSpell extends AbstractSpell {
     @Override
     public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
         return List.of(
-                Component.translatable("ui.irons_spellbooks.radius", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))+2),1)), //Range is equal to power for this spell
-                Component.translatable("ui.irons_spellbooks.aoe_damage", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))*2),1))
-                );
+                Component.translatable("ui.tubois_druidry.boombloom_explosion_radius", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))+2),1)), //Range is equal to power for this spell
+                Component.translatable("ui.irons_spellbooks.aoe_damage", Utils.SetMaxDecimals((Math.sqrt(getSpellPower(spellLevel,caster))*2),1)),
+                Component.translatable("ui.tubois_druidry.boombloom_detection_radius", Utils.SetMaxDecimals(Math.sqrt(getSpellPower(spellLevel,caster)-8)/4,1))
+        );
     }
 
     public HiddenBoombloomSpell() {
         this.manaCostPerLevel = 25;
-        this.baseManaCost = 50;
-        this.castTime = 40;
+        this.baseManaCost = 25;
+        this.castTime = 20;
         this.spellPowerPerLevel = 4;
         this.baseSpellPower = 16;
     }
@@ -53,7 +52,7 @@ public class HiddenBoombloomSpell extends AbstractSpell {
             .setMinRarity(SpellRarity.COMMON)
             .setSchoolResource(SchoolRegistry.NATURE_RESOURCE)
             .setMaxLevel(10)
-            .setCooldownSeconds(5d)
+            .setCooldownSeconds(0.5d)
             .build();
 
     @Override
@@ -135,7 +134,8 @@ public class HiddenBoombloomSpell extends AbstractSpell {
                 false,
                 0d,
                 80d,
-                5d
+                5d,
+                20
         );
         level.addFreshEntity(newboombloom);
     }

@@ -55,7 +55,7 @@ public class BoombloomEntity extends Entity {
     private static final EntityDataAccessor<Integer> LIFETIME = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Optional<UUID>> OWNER_UUID = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.OPTIONAL_UUID);
     private static final EntityDataAccessor<Float> SPAWN_PARTICLE_HEIGHT = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.FLOAT);
-
+    private static final EntityDataAccessor<Integer> SPAWN_DELAY = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
 
     // #################################################################################################################
     // CONSTRUCTOR STUFF
@@ -65,7 +65,7 @@ public class BoombloomEntity extends Entity {
         super(pEntityType, pLevel);
     }
 
-    public BoombloomEntity(Level pLevel, Player pOwner, Float pSpellpower, double pX, double pY, double pZ, boolean emitParticlesOnStandby, Double lifetime, Double armingTime, Double spawnParticleHeight) {
+    public BoombloomEntity(Level pLevel, Player pOwner, Float pSpellpower, double pX, double pY, double pZ, boolean emitParticlesOnStandby, Double lifetime, Double armingTime, Double spawnParticleHeight, int spawnDelay) {
         this(DruidryEntityRegistry.BOOMBLOOM_ENTITY.get(), pLevel); //Run entity constructor
         this.entityData.set(OWNER_UUID, Optional.of(pOwner.getUUID()));
         this.entityData.set(SPELLPOWER, pSpellpower);
@@ -77,6 +77,7 @@ public class BoombloomEntity extends Entity {
         this.entityData.set(LIFETIME, lifetime.intValue());
         this.entityData.set(ARMINGTIME, armingTime.intValue());
         this.entityData.set(SPAWN_PARTICLE_HEIGHT, spawnParticleHeight.floatValue());
+        this.entityData.set(SPAWN_DELAY, spawnDelay);
     }
 
     @Override
@@ -89,6 +90,7 @@ public class BoombloomEntity extends Entity {
         pBuilder.define(LIFETIME, 2400);
         pBuilder.define(OWNER_UUID, Optional.empty());
         pBuilder.define(SPAWN_PARTICLE_HEIGHT, 3f);
+        pBuilder.define(SPAWN_DELAY, 0);
     }
 
     // #################################################################################################################
@@ -130,7 +132,7 @@ public class BoombloomEntity extends Entity {
         //Handle arming period
         if(this.entityData.get(PHASE).equals(Phases.UNARMED)){
             if(!level().isClientSide){
-                if(this.armingTickCounterServer > this.entityData.get(ARMINGTIME)){ //Check if arming sequence is over
+                if(this.armingTickCounterServer > this.entityData.get(ARMINGTIME) + this.entityData.get(SPAWN_DELAY)){ //Check if arming sequence is over
                     //Check if there is a flower on the boomblooms location, if not, create one
                     if(!level().getBlockState(this.blockPosition()).is(BlockTags.FLOWERS)){
 
@@ -265,7 +267,7 @@ public class BoombloomEntity extends Entity {
             //Play explosion sound
             this.playSound(SoundEvents.GENERIC_EXPLODE.value());
             this.playSound(DruidrySoundRegistry.WINDY_LEAVES.value());
-        }else if(this.entityData.get(PHASE).equals(Phases.UNARMED) && !this.armingSoundPlayed && (this.entityData.get(ARMINGTIME) - this.armingTickCounterServer <= 80)){ //Play sound when arming occurs in four seconds (synced with audio for cool effect)
+        }else if(this.entityData.get(PHASE).equals(Phases.UNARMED) && !this.armingSoundPlayed && (this.entityData.get(ARMINGTIME) + this.entityData.get(SPAWN_DELAY) - this.armingTickCounterServer <= 80)){ //Play sound when arming occurs in four seconds (synced with audio for cool effect)
             this.playSound(DruidrySoundRegistry.BOOMBLOOM_ARMED.value(), 4, 0.99f+random.nextFloat()*0.2f);
             this.armingSoundPlayed = true;
         }else if(this.entityData.get(PHASE).equals(Phases.UNARMED)){
@@ -294,8 +296,10 @@ public class BoombloomEntity extends Entity {
             explodeParticles();
         }else if(this.entityData.get(PHASE).equals(Phases.ARMED) && this.entityData.get(EMITPARTICLES).equals(true)){ //only emit passive particles if on standby and passive emission is enabled
             passiveParticles();
-        }else if(this.entityData.get(PHASE).equals(Phases.UNARMED) && armingTickCounterClient <= this.entityData.get(ARMINGTIME)) { //Check if arming sequence is over
-            armingParticles(armingTickCounterClient, (double)this.entityData.get(ARMINGTIME));
+        }else if(this.entityData.get(PHASE).equals(Phases.UNARMED) && armingTickCounterClient - this.entityData.get(SPAWN_DELAY) <= this.entityData.get(ARMINGTIME)) { //Check if arming sequence is over
+            if(armingTickCounterClient-this.entityData.get(SPAWN_DELAY) > 0){ //Spawn particles if armingtickcounter is positive, aka the spawn delay has run out
+                armingParticles(armingTickCounterClient-this.entityData.get(SPAWN_DELAY), (double)this.entityData.get(ARMINGTIME));
+            }
             armingTickCounterClient++;
         }
     }
@@ -368,7 +372,7 @@ public class BoombloomEntity extends Entity {
                         speeds[2]);
             }
 
-            if(random.nextDouble() >= 0.75){
+            if(random.nextDouble() >= 0.9){
                 Double rand = random.nextDouble()*0.5;
                 this.level().addParticle(ParticleTypes.CLOUD, randomVariation(this.xo,1), randomVariation(this.yo,1), randomVariation(this.zo,1),
                         speeds[0]*rand,
