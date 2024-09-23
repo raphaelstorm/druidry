@@ -50,10 +50,11 @@ public class BoombloomEntity extends Entity {
     private static final EntityDataAccessor<String> PHASE = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Float> SPELLPOWER = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> EMITPARTICLES = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Integer> ARMINGTIME = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> FUSETIME = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> LIFETIME = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Optional<UUID>> OWNER_UUID = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.OPTIONAL_UUID);
+
+    private static final EntityDataAccessor<Integer> ARMINGTIME = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> FUSETIME = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SPAWN_PARTICLE_HEIGHT = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> SPAWN_DELAY = SynchedEntityData.defineId(BoombloomEntity.class, EntityDataSerializers.INT);
 
@@ -487,13 +488,42 @@ public class BoombloomEntity extends Entity {
     }
 
     @Override
-    protected void readAdditionalSaveData(CompoundTag pCompound) {
+    public void readAdditionalSaveData(CompoundTag tag) {
 
+        // Load each variable from the tag
+        if (tag.contains("Phase")) {
+            this.entityData.set(PHASE, tag.getString("Phase"));
+        }
+        if (tag.contains("SpellPower")) {
+            this.entityData.set(SPELLPOWER, tag.getFloat("SpellPower"));
+        }
+        if (tag.contains("EmitParticles")) {
+            this.entityData.set(EMITPARTICLES, tag.getBoolean("EmitParticles"));
+        }
+        if (tag.contains("Lifetime")) {
+            this.entityData.set(LIFETIME, tag.getInt("Lifetime"));
+        }
+
+        // Retrieve the owner UUID, if present
+        if (tag.hasUUID("OwnerUUID")) {
+            this.entityData.set(OWNER_UUID, Optional.of(tag.getUUID("OwnerUUID")));
+        } else {
+            this.entityData.set(OWNER_UUID, Optional.empty());
+        }
     }
 
     @Override
-    protected void addAdditionalSaveData(CompoundTag pCompound) {
+    public void addAdditionalSaveData(CompoundTag tag) {
+        // Store each variable in the tag
+        tag.putString("Phase", this.entityData.get(PHASE));
+        tag.putFloat("SpellPower", this.entityData.get(SPELLPOWER));
+        tag.putBoolean("EmitParticles", this.entityData.get(EMITPARTICLES));
+        tag.putInt("Lifetime", this.entityData.get(LIFETIME));
 
+        // Store the owner UUID, if present
+        this.entityData.get(OWNER_UUID).ifPresent(uuid -> {
+            tag.putUUID("OwnerUUID", uuid);
+        });
     }
 
     @Nullable
