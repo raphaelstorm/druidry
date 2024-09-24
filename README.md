@@ -23,7 +23,7 @@ The core mod’s nature magic specializes in damage over time and debuffing. Thi
 - **Vineshot** (*Planned*): A vine grapples creatures to you or pulls you toward a block. Basically, a grappling hook.
 
 #### Damage Spells
-- **Telekinetic Slingshot** (Planned*): Break a natural block, then fling its fragments at enemies for damage based on the block type.
+- **Telekinetic Slingshot** (*Planned*): Break a natural block, then fling its fragments at enemies for damage based on the block type.
 - **Beeline** (*Future Version*): Like the wither skull spell, but fires a bee that explodes on impact and poisons enemies.
 
 ### Gear
