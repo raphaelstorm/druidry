@@ -1,48 +1,40 @@
 # 2boi's Tome of Druidry
+This mod is an addon for Iron's Spells and Spellbooks, expanding the nature school of magic with more focus on environmental interaction.
 
-This mod is an addon for Iron's spells and spellbooks, and aims to expand the "nature" school of magic from the mod.
-
-
-## Planned features
-
+## Planned Features
 ### Spells
-
-In the core mod, the nature school is defined as being specialized in damage over time and debuffing enemies. This addon expands this design philosohpy to include **environmental interaction** as a defining feature of the nature school. All spells added will be thus be made with this concept in mind.
-
-The planned spells for v1 of the mod is as follows:
+The core mod’s nature magic specializes in damage over time and debuffing. This addon builds on that, adding environmental interaction as a key element. Here's what’s planned for version 1:
 
 #### Farming Spells
-- **Fertilizing Breath** (*Completed*): Applies large amount of bonemeal effect in a cone.
-- **Aphrodisiac** (*Planned*): Make two mobs do the dirty without requireing a specific resource. Practical for husbandry.
+- **Fertilizing Breat**h (*Done*): Sprays a cone of bonemeal, boosting plant growth.
+- **Aphrodisiac** (*Planned*): Forces two mobs to breed without needing a specific item. Handy for mass breeding.
 
-#### Trap/Passive defense Spells
-- **Hidden Boombloom** (*Completed*): Enchant a flower to violently explode when a creature moves nearby it.
-- **Meadow Minefield** (*Completed*): Create a large amount of boomblooms with temporary lifetime.
-- **Bumbleguard** (*Planned*): Use this spell on a beehive to the hive into bumbleguard. This special hive will contain bees agressive to hostile mobs and other players, and will regenerate as long as the hive has a supply of honey or sugar. The spellpower decides the number of bees within the hive.
+#### Trap/Passive Defense Spells
+- **Hidden Boombloom** (*Done*): Turns a flower into a landmine that explodes when something gets too close.
+- **Meadow Minefield** (*Done*): Summons a temporary field of Boomblooms.
+- **Bumbleguard** (*Planned*): Cast this on a beehive to turn it into a guard hive. Aggressive bees will attack hostile mobs and players, and respawn as long as there's honey or sugar. More spellpower = more bees.
 
 #### Utility Spells
-- **Metrolomagic** (*Planned*): Change the weather in the world to what you want. May be prevented by other players interupting your cast from afar.
-- **Dendrologistics** (*Planned*): Use this spell on a log to create a storage container accessible from other access points of the same tree type. Each tree type can only have two access points, making it a less efficient than the ender-chest, while providing more storage space.
+- **Metrolomagic** (*Planned*): Change the weather. Other players can interrupt the spell to stop you.
+- **Dendrologistics** (*Planned*): Cast on a log to create a shared storage system. Each tree type gets two access points, offering more space than an Ender Chest but less convenience.
 
 #### Movement Spells
-- **Instant Menhir** (*Planned*): A large rock erupts from the ground, knocking any creatures it hits upwards. The angle of the knockback depends on the view-direction of the caster.
-- **Vineshot** (*Planned*): A vine stretches out, pulling creatures it hits closer to you, or pulling yourself closer to whatever block you hit. Basicly a grappling hook.
+- **Instant Menhir** (*Planned*): Summons a rock from the ground, knocking creatures into the air. Knockback direction depends on where you're looking.
+- **Vineshot** (*Planned*): A vine grapples creatures to you or pulls you toward a block. Basically, a grappling hook.
 
-##### Damage Spells
-- **Telekinnetic Slingshot** (*Planned*): Break a block made from a natural material using telekinnetic force. The broken block will produce fragments made from the same material that will hover around you. On subsequent casts the shards will be flung forwards, dealing an amount of damage dependent on the material type thrown.
-- **Beeline** (*Future version*): Exactly like the "wither skull" spell except you fire a bee that explodes on impact and applies poison to struck creatures.
+#### Damage Spells
+- **Telekinetic Slingshot** (Planned*): Break a natural block, then fling its fragments at enemies for damage based on the block type.
+- **Beeline** (*Future Version*): Like the wither skull spell, but fires a bee that explodes on impact and poisons enemies.
 
 ### Gear
-
-- **Druid Robes** (*Planned*): A traditional set of druid robes.
-- **Battleent Armor** (*Planned*): Plate armor made from the magical bark of the treent. Can be crafted after defeating the treent boss.
-- **Pocket Menhir** (*Future version*): A full sized menhir that fits in the belt slot. Don't know what it should do yet but i find it funny and i want to roleplay as Oblix.
-- **Hoglin Skull Helmet** (*Future version*): Looks cool i guess?
+- **Druid Robes** (*Planned*): Classic druid garb.
+- **Battleent Armor** (*Planned*): Armor made from enchanted treent bark. Craftable after beating the treent boss.
+- **Pocket Menhir** (*Future Version*): A full-sized menhir for your belt slot. No idea what it does yet, but it's funny.
+- **Hoglin Skull Helmet**(*Future Version*): Looks badass, that’s all.
 
 ### Blocks
-- **Menhir** (*Future version*): Right click with an upgrade core to reduce the spellpower for that school of magic within X blocks.
+- **Menhir** (*Future Version*): Right-click with an upgrade core to reduce spellpower for that school of magic within range.
 
 ### Mobs
-
-- **Treent** (*Planned*): A bossfight. Find the wither-rotted heart of the forest somewhere in the nether, and insert it into a socket inside an dead treents husk. The treent will awaken in its corrupted form and attack the player. Upon defeating it, it will become a passive mob.
-- **Hulder** (*Future version*): Mischiveous forest dwellers that shapechange into something horrible whenever below the y=0 coordinate.
+- **Treent** (*Planned*): A boss. Find a wither-rotted heart in the Nether, place it in a dead treent’s husk to awaken it in its corrupted form. Beat it, and it becomes a peaceful mob.
+- **Hulder** (*Future Version*): Tricksy forest creatures that turn into horrors when below Y=0.
