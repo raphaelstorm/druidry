@@ -13,5 +13,8 @@
   "ui.tubois_druidry.boombloom_error_occupied": "A boombloom has already been placed at this location!",
   "ui.tubois_druidry.boombloom_radius": "%s planting radius",
   "ui.tubois_druidry.boombloom_explosion_radius": "%s explosion radius",
-  "ui.tubois_druidry.boombloom_detection_radius": "%s detection radius"
+  "ui.tubois_druidry.boombloom_detection_radius": "%s detection radius",
+
+
+  "block.tubois_druidry.bumbleguard_hive" : "Bumbleguard Hive"
 }

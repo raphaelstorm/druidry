@@ -173,7 +173,6 @@ public class FertilizeProjectile extends AbstractConeProjectile {
             }
             //Display particle
             level().addParticle(ParticleToEmit, x + ox, y + oy, z + oz, result.x, result.y, result.z);
-
         }
     }
 

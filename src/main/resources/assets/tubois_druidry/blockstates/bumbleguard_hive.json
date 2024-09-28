@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "tubois_druidry:block/bumbleguard_hive",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "tubois_druidry:block/bumbleguard_hive"
+    },
+    "facing=south": {
+      "model": "tubois_druidry:block/bumbleguard_hive",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "tubois_druidry:block/bumbleguard_hive",
+      "y": 270
+    }
+  }
+}
