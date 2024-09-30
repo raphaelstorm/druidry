@@ -1,5 +1,6 @@
 package net.tuboi.druidry.setup;
 
+import net.minecraft.client.renderer.entity.BeeRenderer;
 import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -7,6 +8,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.tuboi.druidry.Druidry;
+import net.tuboi.druidry.entity.bumbleguard.BumbleguardRenderer;
 import net.tuboi.druidry.particle.FertilizerParticle;
 import net.tuboi.druidry.particle.FlowerParticle;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
@@ -19,6 +21,7 @@ public class ClientSetup {
     public static void rendererRegister(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(DruidryEntityRegistry.FERTILIZE_PROJECTILE.get(), NoopRenderer::new);
         event.registerEntityRenderer(DruidryEntityRegistry.BOOMBLOOM_ENTITY.get(), NoopRenderer::new);
+        event.registerEntityRenderer(DruidryEntityRegistry.BUMBLEGUARD.get(), BumbleguardRenderer::new);
     }
 
     @SubscribeEvent
