@@ -7,34 +7,34 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.util.TimeUtil;
-import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.control.LookControl;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.GoalSelector;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.ai.util.AirAndWaterRandomPos;
 import net.minecraft.world.entity.ai.util.AirRandomPos;
-import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.Bee;
-import net.minecraft.world.entity.animal.FlyingAnimal;
+import net.minecraft.world.entity.ai.util.HoverRandomPos;
+import net.minecraft.world.entity.animal.*;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BeehiveBlockEntity;
 import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
+import net.tuboi.druidry.utils.SendMessage;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -53,6 +53,9 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
     private Double detectionRadius = 8.0;
     private List<LivingEntity> enemyList = new ArrayList<>();
+    private List<Entity> individualWhitelist = new ArrayList<>();
+    private List<Class> classWhitelist = new ArrayList<>();
+    private Player owner;
 
     // #################################################################################################################
     // INITIATION
@@ -68,10 +71,13 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         this.setPathfindingMalus(PathType.WATER_BORDER, 16.0F);
         this.setPathfindingMalus(PathType.COCOA, -1.0F);
         this.setPathfindingMalus(PathType.FENCE, -1.0F);
+        this.individualWhitelist.add(this);
+        this.classWhitelist.add(Animal.class);
     }
 
-    public Bumbleguard(Level world) {
+    public Bumbleguard(Level world, Player owner) {
         super(DruidryEntityRegistry.BUMBLEGUARD.get(), world);
+        this.owner = owner;
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -87,6 +93,8 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new Bumbleguard.BeeAttackGoal(this, 1.4f, true));
         this.goalSelector.addGoal(1, new Bumbleguard.SearchForEnemiesGoal());
+        this.goalSelector.addGoal(2, new Bumbleguard.BeeWanderGoal());
+        this.goalSelector.addGoal(3, new FloatGoal(this));
     }
 
     //Synced data
@@ -159,6 +167,10 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
             super.tick();
 
         }
+    }
+
+    boolean closerThan(BlockPos pPos, int pDistance) {
+        return pPos.closerThan(this.blockPosition(), (double)pDistance);
     }
 
     // #################################################################################################################
@@ -260,21 +272,21 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
     class SearchForEnemiesGoal extends BaseBeeGoal {
         public boolean canBeeUse() {
-            return super.canUse() && Bumbleguard.this.getTarget() == null || Bumbleguard.this.getTarget() != null && !Bumbleguard.this.getTarget().isAlive();
+            return Bumbleguard.this.getTarget() == null || (Bumbleguard.this.getTarget() != null && !Bumbleguard.this.getTarget().isAlive());
         }
 
         public boolean canBeeContinueToUse() {
-            return super.canContinueToUse() && Bumbleguard.this.getTarget() == null || Bumbleguard.this.getTarget() != null && !Bumbleguard.this.getTarget().isAlive();
+            return Bumbleguard.this.getTarget() == null || (Bumbleguard.this.getTarget() != null && !Bumbleguard.this.getTarget().isAlive());
         }
 
         @Override
         public void start() {
-
+            new SendMessage().Send("Starting search for enemies!");
         }
 
         @Override
         public void stop() {
-
+            new SendMessage().Send("Stopping search!");
         }
 
         @Override
@@ -285,9 +297,11 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         @Override
         public void tick() {
             if(Bumbleguard.this.getTarget() == null || Bumbleguard.this.getTarget() != null && !Bumbleguard.this.getTarget().isAlive()){
+
+                new SendMessage().Send("Searching for enemies!");
                 //Look for new enemies
                 getNewEnemies().forEach(LivingEntity -> {
-                    if(!Bumbleguard.this.enemyList.contains(LivingEntity)){
+                    if(!Bumbleguard.this.enemyList.contains(LivingEntity) && Bumbleguard.this.isValidTarget(LivingEntity)){
                         Bumbleguard.this.enemyList.add(LivingEntity);
                     }
                 });
@@ -295,6 +309,47 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
             }
         }
 
+    }
+
+    class BeeWanderGoal extends Goal {
+        private static final int WANDER_THRESHOLD = 22;
+
+        BeeWanderGoal() {
+            this.setFlags(EnumSet.of(Goal.Flag.MOVE));
+        }
+
+        @Override
+        public boolean canUse() {
+            return Bumbleguard.this.navigation.isDone() && Bumbleguard.this.random.nextInt(10) == 0;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return Bumbleguard.this.navigation.isInProgress();
+        }
+
+        @Override
+        public void start() {
+            Vec3 vec3 = this.findPos();
+            if (vec3 != null) {
+                Bumbleguard.this.navigation.moveTo(Bumbleguard.this.navigation.createPath(BlockPos.containing(vec3), 1), 1.0);
+            }
+        }
+
+        @Nullable
+        private Vec3 findPos() {
+            Vec3 vec3;
+            if (Bumbleguard.this.hasHive() && !Bumbleguard.this.closerThan(Bumbleguard.this.hivePos, 22)) {
+                Vec3 vec31 = Vec3.atCenterOf(Bumbleguard.this.hivePos);
+                vec3 = vec31.subtract(Bumbleguard.this.position()).normalize();
+            } else {
+                vec3 = Bumbleguard.this.getViewVector(0.0F);
+            }
+
+            int i = 8;
+            Vec3 vec32 = HoverRandomPos.getPos(Bumbleguard.this, 8, 7, vec3.x, vec3.z, (float) (Math.PI / 2), 3, 1);
+            return vec32 != null ? vec32 : AirAndWaterRandomPos.getPos(Bumbleguard.this, 8, 4, -2, vec3.x, vec3.z, (float) (Math.PI / 2));
+        }
     }
 
     // #################################################################################################################
@@ -333,6 +388,41 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         }
 
         return closest;
+    }
+
+    private boolean isValidTarget(Entity entity){
+
+        //Don't attack creative or spectating players
+        if(entity instanceof Player && (((Player) entity).isCreative()) || entity.isSpectator()){
+            return false;
+        }
+
+        //Don't attack bees or other bumbleguard
+        if(entity instanceof Bee || entity instanceof Bumbleguard){
+            return false;
+        }
+
+        //Don't attack whitelisted creatures
+        if(individualWhitelist.contains(entity)){
+            return false;
+        }
+
+        //Don't attack passive mobs
+        if(entity instanceof Animal && !(entity instanceof NeutralMob)){
+            return false;
+        }
+
+        //Don't attack owner
+        if(entity instanceof Player && (entity.getUUID().equals(this.owner.getUUID()))){
+            return false;
+        }
+
+        //Don't attack pet's of owner
+        if(entity instanceof TamableAnimal && ((TamableAnimal) entity).isTame() && ((TamableAnimal) entity).isOwnedBy(this.owner)){
+            return false;
+        }
+
+        return true;
     }
 
 }

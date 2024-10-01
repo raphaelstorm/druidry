@@ -18,7 +18,7 @@ public class BumbleguardRenderer extends MobRenderer<Bumbleguard, BumbleguardMod
     }
 
     public ResourceLocation getTextureLocation(Bumbleguard pEntity) {
-        if (pEntity.hasTarget()) {
+        if (pEntity.isAggressive()) {
             return  BUMBLEGUARD_ANGRY_TEXTURE;
         } else {
             return  BUMBLEGUARD_TEXTURE;
