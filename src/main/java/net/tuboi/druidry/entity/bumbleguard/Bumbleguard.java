@@ -1,6 +1,7 @@
 package net.tuboi.druidry.entity.bumbleguard;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -26,9 +27,12 @@ import net.minecraft.world.entity.animal.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BeehiveBlock;
+import net.minecraft.world.level.block.entity.BeehiveBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.pathfinder.PathType;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.tuboi.druidry.block.bumbleguardhive.BumbleguardBlockEntity;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
 import net.tuboi.druidry.utils.SendMessage;
 
@@ -47,15 +51,12 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
     private static final EntityDataAccessor<Byte> DATA_FLAGS_ID = SynchedEntityData.defineId(Bumbleguard.class, EntityDataSerializers.BYTE);
 
+    private Player owner;
+    private String bumbleId;
+
     @Nullable
     private BlockPos hivePos;
-    private UUID persistentAngerTarget;
-
-    private Double detectionRadius = 8.0;
     private List<LivingEntity> enemyList = new ArrayList<>();
-    private List<Entity> individualWhitelist = new ArrayList<>();
-    private List<Class> classWhitelist = new ArrayList<>();
-    private Player owner;
 
     // #################################################################################################################
     // INITIATION
@@ -71,13 +72,17 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         this.setPathfindingMalus(PathType.WATER_BORDER, 16.0F);
         this.setPathfindingMalus(PathType.COCOA, -1.0F);
         this.setPathfindingMalus(PathType.FENCE, -1.0F);
-        this.individualWhitelist.add(this);
-        this.classWhitelist.add(Animal.class);
     }
 
-    public Bumbleguard(Level world, Player owner) {
+    public Bumbleguard(Level world, Player owner, String bumbleID, BlockPos hivePos, double pX, double pY, double pZ) {
         super(DruidryEntityRegistry.BUMBLEGUARD.get(), world);
         this.owner = owner;
+        this.bumbleId = bumbleID;
+        this.hivePos = hivePos;
+        this.setPos(pX, pY, pZ);
+        this.xo = pX;
+        this.yo = pY;
+        this.zo = pZ;
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -93,8 +98,9 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new Bumbleguard.BeeAttackGoal(this, 1.4f, true));
         this.goalSelector.addGoal(1, new Bumbleguard.SearchForEnemiesGoal());
-        this.goalSelector.addGoal(2, new Bumbleguard.BeeWanderGoal());
-        this.goalSelector.addGoal(3, new FloatGoal(this));
+        //this.goalSelector.addGoal(2, new Bumbleguard.EnterHiveGoal());
+        this.goalSelector.addGoal(3, new Bumbleguard.ReturnToHiveGoal());
+        this.goalSelector.addGoal(4, new Bumbleguard.SuicideGoal());
     }
 
     //Synced data
@@ -118,15 +124,11 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     }
 
     // #################################################################################################################
-    // MISC
+    // API
     // #################################################################################################################
 
     public boolean hasHive(){
-        if(this.hivePos != null) {
-            return true;
-        }else{
-            return false;
-        }
+        return this.hivePos != null;
     }
 
     public boolean hasTarget(){
@@ -171,6 +173,18 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
     boolean closerThan(BlockPos pPos, int pDistance) {
         return pPos.closerThan(this.blockPosition(), (double)pDistance);
+    }
+
+    public UUID getOwnerUUID(){
+        return this.owner.getUUID();
+    }
+
+    public String getBumbleId(){
+        return this.bumbleId;
+    }
+
+    public Boolean hiveIsValid(){
+        return hasHive() && level().getBlockEntity(this.hivePos) instanceof BumbleguardBlockEntity && ((BumbleguardBlockEntity) level().getBlockEntity(this.hivePos)).IsMemberOf(Bumbleguard.this.getBumbleId());
     }
 
     // #################################################################################################################
@@ -299,12 +313,12 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
             if(Bumbleguard.this.getTarget() == null || Bumbleguard.this.getTarget() != null && !Bumbleguard.this.getTarget().isAlive()){
 
                 new SendMessage().Send("Searching for enemies!");
+
                 //Look for new enemies
-                getNewEnemies().forEach(LivingEntity -> {
-                    if(!Bumbleguard.this.enemyList.contains(LivingEntity) && Bumbleguard.this.isValidTarget(LivingEntity)){
-                        Bumbleguard.this.enemyList.add(LivingEntity);
-                    }
-                });
+                Bumbleguard.this.enemyList.clear();
+                Bumbleguard.this.enemyList.addAll(getNewEnemies());
+
+                //From the avaliable targets given by the hive, select the closest one
                 Bumbleguard.this.setTarget(getClosestEnemyWithinLineOfSight());
             }
         }
@@ -352,6 +366,75 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         }
     }
 
+    class ReturnToHiveGoal extends BaseBeeGoal {
+
+        ReturnToHiveGoal() {
+            this.setFlags(EnumSet.of(Goal.Flag.MOVE));
+        }
+
+        @Override
+        public boolean canBeeUse() {
+            return Bumbleguard.this.navigation.isDone() && hasHive();
+        }
+
+        @Override
+        public boolean canBeeContinueToUse() {
+            return Bumbleguard.this.navigation.isInProgress() && hasHive();
+        }
+
+        @Override
+        public void start() {
+            BlockPos hivePos = Bumbleguard.this.hivePos;
+            Vec3 vec3 = hivePos.getCenter();
+            Bumbleguard.this.navigation.moveTo(Bumbleguard.this.navigation.createPath(BlockPos.containing(vec3), 1), 1.0);
+        }
+    }
+
+    class EnterHiveGoal extends BaseBeeGoal{
+        EnterHiveGoal() {
+            this.setFlags(EnumSet.of(Flag.TARGET));
+        }
+
+        @Override
+        public boolean canBeeUse() {
+            return hasHive() && Bumbleguard.this.hivePos.closerThan(new Vec3i(Bumbleguard.this.getBlockX(), Bumbleguard.this.getBlockY(), Bumbleguard.this.getBlockZ()), 2);
+        }
+
+        @Override
+        public boolean canBeeContinueToUse() {
+            return canBeeUse();
+        }
+
+        @Override
+        public void start() {
+            BlockEntity hive = level().getBlockEntity(Bumbleguard.this.hivePos);
+            if(hive instanceof BumbleguardBlockEntity){
+                ((BumbleguardBlockEntity) hive).Enter(Bumbleguard.this);
+            }
+        }
+    }
+
+    class SuicideGoal extends BaseBeeGoal{
+        SuicideGoal() {
+            this.setFlags(EnumSet.of(Flag.TARGET));
+        }
+
+        @Override
+        public boolean canBeeUse() {
+            return !hiveIsValid();
+        }
+
+        @Override
+        public boolean canBeeContinueToUse() {
+            return !hiveIsValid();
+        }
+
+        @Override
+        public void start() {
+            Bumbleguard.this.kill(); // :( poor little bee
+        }
+    }
+
     // #################################################################################################################
     // HELPERS
     // #################################################################################################################
@@ -362,12 +445,13 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         //Create new list
         List<LivingEntity> enemies = new ArrayList<>();
 
-        //Get enemies around beehive
-
-        //Get enemies around self
-        Double r = this.detectionRadius;
-        AABB targetArea = AABB.ofSize(this.blockPosition().getCenter(),r,r,r);
-        enemies.addAll(level().getEntitiesOfClass(LivingEntity.class, targetArea));
+        //If beehive is present, get the enemy list
+        if(this.hasHive()){
+            var hive = level().getBlockEntity(this.hivePos);
+            if (hive instanceof BumbleguardBlockEntity){
+                enemies.addAll(((BumbleguardBlockEntity) hive).getTargets());
+            }
+        }
 
         return enemies;
     }
@@ -389,40 +473,4 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
         return closest;
     }
-
-    private boolean isValidTarget(Entity entity){
-
-        //Don't attack creative or spectating players
-        if(entity instanceof Player && (((Player) entity).isCreative()) || entity.isSpectator()){
-            return false;
-        }
-
-        //Don't attack bees or other bumbleguard
-        if(entity instanceof Bee || entity instanceof Bumbleguard){
-            return false;
-        }
-
-        //Don't attack whitelisted creatures
-        if(individualWhitelist.contains(entity)){
-            return false;
-        }
-
-        //Don't attack passive mobs
-        if(entity instanceof Animal && !(entity instanceof NeutralMob)){
-            return false;
-        }
-
-        //Don't attack owner
-        if(entity instanceof Player && (entity.getUUID().equals(this.owner.getUUID()))){
-            return false;
-        }
-
-        //Don't attack pet's of owner
-        if(entity instanceof TamableAnimal && ((TamableAnimal) entity).isTame() && ((TamableAnimal) entity).isOwnedBy(this.owner)){
-            return false;
-        }
-
-        return true;
-    }
-
 }

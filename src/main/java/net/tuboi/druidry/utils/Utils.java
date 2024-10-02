@@ -140,4 +140,17 @@ public class Utils {
 
         return blocksInRadius;
     }
+
+    public static String generateRandomString(int length) {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder randomString = new StringBuilder();
+        Random random = new Random();
+
+        for (int i = 0; i < length; i++) {
+            int index = random.nextInt(chars.length());
+            randomString.append(chars.charAt(index));
+        }
+
+        return randomString.toString();
+    }
 }

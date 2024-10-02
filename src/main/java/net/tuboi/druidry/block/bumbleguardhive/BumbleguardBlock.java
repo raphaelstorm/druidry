@@ -1,16 +1,24 @@
 package net.tuboi.druidry.block.bumbleguardhive;
 
 import com.mojang.serialization.MapCodec;
+import io.redspace.ironsspellbooks.block.alchemist_cauldron.AlchemistCauldronTile;
+import io.redspace.ironsspellbooks.registries.BlockRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.entity.BeehiveBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.tuboi.druidry.Druidry;
+import net.tuboi.druidry.registries.DruidryBlockRegistry;
 
 import javax.annotation.Nullable;
 
@@ -31,6 +39,16 @@ public class BumbleguardBlock extends BaseEntityBlock {
     @Override
     public BlockEntity newBlockEntity(BlockPos pPos, BlockState pState) {
         return new BumbleguardBlockEntity(pPos, pState);
+    }
+
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level pLevel, BlockState pState, BlockEntityType<T> pBlockEntityType) {
+        return createTicker(pLevel, pBlockEntityType, DruidryBlockRegistry.BUMBLEGUARD_HIVE_BLOCKENTITY.get());
+    }
+
+    @javax.annotation.Nullable
+    protected static <T extends BlockEntity> BlockEntityTicker<T> createTicker(Level pLevel, BlockEntityType<T> pServerType, BlockEntityType<? extends BumbleguardBlockEntity> pClientType) {
+        return pLevel.isClientSide ? null : createTickerHelper(pServerType, pClientType, BumbleguardBlockEntity::serverTick);
     }
 
     //##################################################################################################################
