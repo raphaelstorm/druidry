@@ -1,6 +1,7 @@
 package net.tuboi.druidry.utils;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.BlockTags;
@@ -152,5 +153,27 @@ public class Utils {
         }
 
         return randomString.toString();
+    }
+
+    public static Vec3 directionToVec3(Direction direction) {
+        Random random = new Random();
+
+        // Convert the direction to a unit vector
+        Vec3 baseVec = switch (direction) {
+            case NORTH -> new Vec3(0, 0, -1);
+            case SOUTH -> new Vec3(0, 0, 1);
+            case EAST  -> new Vec3(1, 0, 0);
+            case WEST  -> new Vec3(-1, 0, 0);
+            case UP    -> new Vec3(0, 1, 0);
+            case DOWN  -> new Vec3(0, -1, 0);
+        };
+
+        // Add a small amount of randomization to the vector
+        double randomX = (random.nextDouble() - 0.5) * 0.1;  // Random value between -0.05 and 0.05
+        double randomY = (random.nextDouble() - 0.5) * 0.1;
+        double randomZ = (random.nextDouble() - 0.5) * 0.1;
+
+        // Return the new vector with randomization
+        return baseVec.add(randomX, randomY, randomZ);
     }
 }

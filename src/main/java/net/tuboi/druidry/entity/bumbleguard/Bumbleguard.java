@@ -51,6 +51,8 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
     private static final EntityDataAccessor<Byte> DATA_FLAGS_ID = SynchedEntityData.defineId(Bumbleguard.class, EntityDataSerializers.BYTE);
 
+    private Integer minimumTicksOutOfHive = 600;
+    private Double ticksOutOfHiveCounter = 0d;
     private Player owner;
     private String bumbleId;
 
@@ -83,6 +85,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         this.xo = pX;
         this.yo = pY;
         this.zo = pZ;
+        this.ticksOutOfHiveCounter+=Math.ceil(getRandom().nextDouble()*600); //add between 0 and 30 seconds
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -98,9 +101,10 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new Bumbleguard.BeeAttackGoal(this, 1.4f, true));
         this.goalSelector.addGoal(1, new Bumbleguard.SearchForEnemiesGoal());
-        //this.goalSelector.addGoal(2, new Bumbleguard.EnterHiveGoal());
+        this.goalSelector.addGoal(2, new Bumbleguard.EnterHiveGoal());
         this.goalSelector.addGoal(3, new Bumbleguard.ReturnToHiveGoal());
-        this.goalSelector.addGoal(4, new Bumbleguard.SuicideGoal());
+        this.goalSelector.addGoal(4, new BeeWanderGoal());
+        this.goalSelector.addGoal(5, new Bumbleguard.SuicideGoal());
     }
 
     //Synced data
@@ -243,6 +247,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     @Override
     public void tick() {
         super.tick();
+        advanceTimeOutOfHiveCounter();
     }
 
     // #################################################################################################################
@@ -334,12 +339,12 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
         @Override
         public boolean canUse() {
-            return Bumbleguard.this.navigation.isDone() && Bumbleguard.this.random.nextInt(10) == 0;
+            return Bumbleguard.this.navigation.isDone() && Bumbleguard.this.random.nextInt(10) == 0 && Bumbleguard.this.getMinTimeOutOfHivePercentageProgress() < 1;
         }
 
         @Override
         public boolean canContinueToUse() {
-            return Bumbleguard.this.navigation.isInProgress();
+            return Bumbleguard.this.navigation.isInProgress() && Bumbleguard.this.getMinTimeOutOfHivePercentageProgress() < 1;
         }
 
         @Override
@@ -374,12 +379,12 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
         @Override
         public boolean canBeeUse() {
-            return Bumbleguard.this.navigation.isDone() && hasHive();
+            return Bumbleguard.this.navigation.isDone() && hiveIsValid() && getMinTimeOutOfHivePercentageProgress() == 1;
         }
 
         @Override
         public boolean canBeeContinueToUse() {
-            return Bumbleguard.this.navigation.isInProgress() && hasHive();
+            return Bumbleguard.this.navigation.isInProgress() && hiveIsValid();
         }
 
         @Override
@@ -397,7 +402,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
         @Override
         public boolean canBeeUse() {
-            return hasHive() && Bumbleguard.this.hivePos.closerThan(new Vec3i(Bumbleguard.this.getBlockX(), Bumbleguard.this.getBlockY(), Bumbleguard.this.getBlockZ()), 2);
+            return hiveIsValid() && getMinTimeOutOfHivePercentageProgress() == 1 && Bumbleguard.this.hivePos.closerThan(new Vec3i(Bumbleguard.this.getBlockX(), Bumbleguard.this.getBlockY(), Bumbleguard.this.getBlockZ()), 2);
         }
 
         @Override
@@ -472,5 +477,15 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         }
 
         return closest;
+    }
+
+    private Double getMinTimeOutOfHivePercentageProgress(){
+        return this.ticksOutOfHiveCounter/ minimumTicksOutOfHive;
+    }
+
+    private void advanceTimeOutOfHiveCounter(){
+        if(this.ticksOutOfHiveCounter < minimumTicksOutOfHive){
+            this.ticksOutOfHiveCounter++;
+        }
     }
 }
