@@ -55,7 +55,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
     private static final EntityDataAccessor<Byte> DATA_FLAGS_ID = SynchedEntityData.defineId(Bumbleguard.class, EntityDataSerializers.BYTE);
 
-    private Integer minimumTicksOutOfHive = 600;
+    private Integer minimumTicksOutOfHive = 800;
     private Double ticksOutOfHiveCounter = 0d;
     private Player owner;
     private String bumbleId;

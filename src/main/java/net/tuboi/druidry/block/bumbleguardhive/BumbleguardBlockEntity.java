@@ -3,6 +3,8 @@ package net.tuboi.druidry.block.bumbleguardhive;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.*;
@@ -114,6 +116,8 @@ public class BumbleguardBlockEntity extends BlockEntity {
         level.addFreshEntity(newBumbleGuard);
         newBumbleGuard.setDeltaMovement(Vec3.atLowerCornerOf(dirVec)); //Give the bee a push out of the hive
         newBumbleGuard.getLookControl().setLookAt(Vec3.atLowerCornerOf(dirVec)); //Make the bee look the direction of the launch
+        Utils.createParticleBurst(level, blockpos, Utils.directionToVec3(direction), 10, ParticleTypes.FALLING_HONEY);
+
         getLevel().playSound(null, blockpos, SoundEvents.BEEHIVE_EXIT, SoundSource.BLOCKS, 1.0F, 1.0F);
         return true;
     }

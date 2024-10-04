@@ -3,6 +3,9 @@ package net.tuboi.druidry.utils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
@@ -175,5 +178,22 @@ public class Utils {
 
         // Return the new vector with randomization
         return baseVec.add(randomX, randomY, randomZ);
+    }
+
+    public static void createParticleBurst(Level level, BlockPos pos, Vec3 direction, int particleCount, ParticleOptions particle) {
+        Random random = new Random();
+        for (int i = 0; i < particleCount; i++) {
+            // Randomize the angle within the cone
+            double angle = random.nextDouble() * Math.PI * 2;
+            double offset = random.nextDouble() * 0.5; // Adjust the spread of the particles
+
+            // Calculate the particle's velocity
+            double x = direction.x + offset * Math.cos(angle);
+            double y = direction.y + offset * Math.sin(angle);
+            double z = direction.z + offset * Math.sin(angle);
+
+            // Create the particle
+            level.addParticle(particle, pos.getX(), pos.getY(), pos.getZ(), x, y, z);
+        }
     }
 }
