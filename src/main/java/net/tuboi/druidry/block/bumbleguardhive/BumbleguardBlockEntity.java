@@ -3,7 +3,6 @@ package net.tuboi.druidry.block.bumbleguardhive;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
-import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -27,29 +26,33 @@ import java.util.stream.Collectors;
 
 public class BumbleguardBlockEntity extends BlockEntity {
 
-    private static final int SPELLPOWER = 20;
-    private static final int MAX_OCCUPANTS = 0;
     private static final Double DETECTION_DISTANCE = 30d; //How far enemies should be before bees are released from the hive
-    private static final Double CHASE_DISTANCE = 30d; //Maximum distance from hive bees should follow enemy before giving up
+    private static final Double CHASE_DISTANCE = 60d; //Maximum distance from hive bees should follow enemy before giving up
 
-    private String hiveId;
     private Integer timeUntilNextBeeAllowedToLeave = 0;
     private Integer secondCountDown = 0;
     private static final Integer maxTimeUntilNextBeeAllowedToLeave = 20;
-
-    private List<LivingEntity> targetList = new ArrayList<>();
-    private List<StoredBee> bees = new ArrayList<>(); //List of all bee tags
-    private List<Entity> individualWhitelist = new ArrayList<>();
+    private List<LivingEntity> targets = new ArrayList<>();
+    private List<StoredBee> storedBees = new ArrayList<>();
     private Player owner;
+    private int spellpower = 10;
 
     public BumbleguardBlockEntity(BlockEntityType<? extends BumbleguardBlockEntity> pEntityType, BlockPos pPos, BlockState pState) {
         super(pEntityType, pPos, pState);
     }
 
-    public BumbleguardBlockEntity(BlockPos pPos, BlockState pState) {
+    public BumbleguardBlockEntity(BlockPos pPos, BlockState pState, Player owner, Integer spellpower) {
         super(DruidryBlockRegistry.BUMBLEGUARD_HIVE_BLOCKENTITY.get(), pPos, pState);
+        this.owner = owner;
+        this.spellpower = spellpower;
         this.generateBeeTags();
-        this.generateHiveTag();
+    }
+
+    public BumbleguardBlockEntity(BlockPos blockPos, BlockState blockState) {
+        super(DruidryBlockRegistry.BUMBLEGUARD_HIVE_BLOCKENTITY.get(), blockPos, blockState);
+        this.generateBeeTags();
+        this.owner = null;
+        this.spellpower = 1;
     }
 
     public static void serverTick(Level pLevel, BlockPos pPos, BlockState pState, BumbleguardBlockEntity pBeehive) {
@@ -77,7 +80,7 @@ public class BumbleguardBlockEntity extends BlockEntity {
         //Check if there are enemies in the area
         List<LivingEntity> enemies = new ArrayList<>(pBeehive.getTargets());
         if(!enemies.isEmpty()) { //If there are enemies, deploy avaiable bees bees
-            pBeehive.bees.forEach(StoredBee -> {
+            pBeehive.storedBees.forEach(StoredBee -> {
                 if(StoredBee.status == "READY"){
                     if(pBeehive.spawnNewBumbleguard(StoredBee.getId())){
                         StoredBee.setStatus("ACTIVE"); //set as active is spawning was successful
@@ -108,22 +111,21 @@ public class BumbleguardBlockEntity extends BlockEntity {
                 this.owner,
                 id,
                 this.getBlockPos(),
-                blockpos.getX(),
-                blockpos.getY(),
-                blockpos.getZ()
+                blockpos.getCenter().x,
+                blockpos.getCenter().y,
+                blockpos.getCenter().z
         );
         Vec3i dirVec = direction.getNormal(); //Get random direction out of the hive
-        level.addFreshEntity(newBumbleGuard);
+        getLevel().addFreshEntity(newBumbleGuard);
         newBumbleGuard.setDeltaMovement(Vec3.atLowerCornerOf(dirVec)); //Give the bee a push out of the hive
-        newBumbleGuard.getLookControl().setLookAt(Vec3.atLowerCornerOf(dirVec)); //Make the bee look the direction of the launch
-        Utils.createParticleBurst(level, blockpos, Utils.directionToVec3(direction), 10, ParticleTypes.FALLING_HONEY);
-
+        newBumbleGuard.getLookControl().setLookAt(Vec3.atCenterOf(dirVec)); //Make the bee look the direction of the launch
+        Utils.createParticleBurst(getLevel(), blockpos, Vec3.atCenterOf(dirVec), 1000, ParticleTypes.FLAME);
         getLevel().playSound(null, blockpos, SoundEvents.BEEHIVE_EXIT, SoundSource.BLOCKS, 1.0F, 1.0F);
         return true;
     }
 
     private void advanceBeeRespawnTicks(){
-        bees.forEach(StoredBee::advanceRespawn);
+        storedBees.forEach(StoredBee::advanceRespawn);
     }
 
     private void checkForKilledBeesAndUpdateStore() {
@@ -139,12 +141,12 @@ public class BumbleguardBlockEntity extends BlockEntity {
                 .collect(Collectors.toSet());
 
         // Verify which bees are active and present in the area
-        List<StoredBee> verifiedBees = bees.stream()
+        List<StoredBee> verifiedBees = storedBees.stream()
                 .filter(bee -> "ACTIVE".equals(bee.getStatus()) && bumbleguardIds.contains(bee.getId()))
                 .collect(Collectors.toList());
 
         // Set status of bees not found to "DEAD"
-        bees.forEach(bee -> {
+        storedBees.forEach(bee -> {
             if ("ACTIVE".equals(bee.getStatus()) && !verifiedBees.contains(bee)) {
                 bee.setStatus("DEAD");
                 bee.setTimeUntilRespawn(200); //10 seconds respawn timer
@@ -157,12 +159,12 @@ public class BumbleguardBlockEntity extends BlockEntity {
     // #################################################################################################################
 
     public List<LivingEntity> getTargets() {
-        return this.targetList;
+        return this.targets;
     }
 
     public boolean Enter(Bumbleguard pBumbleguard) {
         boolean found = false;
-        for (StoredBee storedBee : bees) {
+        for (StoredBee storedBee : storedBees) {
             if (storedBee.getId().equals(pBumbleguard.getBumbleId())) { // Use equals() for string comparison
                 storedBee.setStatus("READY");
                 storedBee.setTimeUntilRespawn(0); //just in case
@@ -189,7 +191,7 @@ public class BumbleguardBlockEntity extends BlockEntity {
     }
 
     public boolean IsMemberOf(String id){
-        for (StoredBee bee : bees) {
+        for (StoredBee bee : storedBees) {
             if (bee.getId().equals(id)) {
                 return true;
             }
@@ -197,13 +199,22 @@ public class BumbleguardBlockEntity extends BlockEntity {
         return false;
     };
 
+    public Double getChaseDistance() {
+        return CHASE_DISTANCE;
+    }
+
+
+    public boolean hasOwner() {
+        return this.owner != null;
+    }
+
     // #################################################################################################################
     // HELPERS
     // #################################################################################################################
 
 
     private void gatherTargetsFromSurroundingArea(){
-        this.targetList.clear();
+        this.targets.clear();
 
         //Get enemies around hive
         Double r = DETECTION_DISTANCE;
@@ -211,7 +222,7 @@ public class BumbleguardBlockEntity extends BlockEntity {
 
         getLevel().getEntitiesOfClass(LivingEntity.class, targetArea).forEach(LivingEntity -> {
             if(this.isValidTarget(LivingEntity)){
-                this.targetList.add(LivingEntity);
+                this.targets.add(LivingEntity);
             }
         });
     }
@@ -229,7 +240,7 @@ public class BumbleguardBlockEntity extends BlockEntity {
         }
 
         //Don't attack whitelisted creatures
-        if(individualWhitelist.contains(entity)){
+        if(hasOwner() && Utils.BumbleguardTagUtil.playerHasTaggedEntity(entity, owner.getUUID().toString())){
             return false;
         }
 
@@ -239,24 +250,32 @@ public class BumbleguardBlockEntity extends BlockEntity {
         }
 
         //Don't attack owner
-        if(this.owner != null && entity instanceof Player && (entity.getUUID().equals(this.owner.getUUID()))){
+        if(hasOwner() && this.owner != null && entity instanceof Player && (entity.getUUID().equals(this.owner.getUUID()))){
             return false;
         }
 
         //Don't attack pet's of owner
-        if(this.owner != null && entity instanceof TamableAnimal && ((TamableAnimal) entity).isTame() && ((TamableAnimal) entity).isOwnedBy(this.owner)){
+        if(hasOwner() && this.owner != null && entity instanceof TamableAnimal && ((TamableAnimal) entity).isTame() && ((TamableAnimal) entity).isOwnedBy(this.owner)){
             return false;
+        }
+
+        //Don't attack pets of whitelisted players
+        if(hasOwner() && this.owner != null && entity instanceof TamableAnimal && ((TamableAnimal) entity).isTame()){
+            LivingEntity petsOwner =((TamableAnimal) entity).getOwner();
+            if (petsOwner instanceof Player) {
+                return !Utils.BumbleguardTagUtil.playerHasTaggedEntity(petsOwner, owner.getUUID().toString());
+            }
         }
 
         return true;
     }
 
     private void generateBeeTags(){
-        this.bees.clear();
+        this.storedBees.clear();
 
         //Generate X numbers of random strings the bees may be identified as
-        for(int i=0;i<calcNumberOfBeesFromSpellpower(this.SPELLPOWER);i++){
-            this.bees.add(new StoredBee(
+        for(int i = 0; i<calcNumberOfBeesFromSpellpower(this.spellpower); i++){
+            this.storedBees.add(new StoredBee(
                     Utils.generateRandomString(8),
                     0,
                     "READY"
@@ -264,12 +283,8 @@ public class BumbleguardBlockEntity extends BlockEntity {
         }
     }
 
-    private void generateHiveTag(){
-        this.hiveId = Utils.generateRandomString(8);
-    }
-
     private Integer calcNumberOfBeesFromSpellpower(Integer spellpower){
-        return (int)Math.floor(1 + (double) spellpower /2);
+        return spellpower;
     };
 
     public class StoredBee {

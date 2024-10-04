@@ -147,7 +147,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     }
 
     public boolean hasTarget(){
-        return Bumbleguard.this.getTarget() == null || Bumbleguard.this.getTarget() != null && !Bumbleguard.this.getTarget().isAlive();
+        return Bumbleguard.this.getTarget() != null && Bumbleguard.this.getTarget().isAlive();
     }
 
     @Override
@@ -324,7 +324,10 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
         @Override
         public boolean canContinueToUse() {
-            return super.canContinueToUse();
+            return super.canContinueToUse() && Bumbleguard.this.hasTarget() && Bumbleguard.this.hasHive() && level().getBlockEntity(Bumbleguard.this.hivePos) instanceof BumbleguardBlockEntity
+                    && Bumbleguard.this.hivePos.getCenter().closerThan(Bumbleguard.this.getTarget().position(),
+                        ((BumbleguardBlockEntity) level().getBlockEntity(Bumbleguard.this.hivePos)).getChaseDistance()
+                    );
         }
     }
 
@@ -441,7 +444,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
         @Override
         public boolean canBeeUse() {
-            return hiveIsValid() && getMinTimeOutOfHivePercentageProgress() == 1 && Bumbleguard.this.hivePos.closerThan(new Vec3i(Bumbleguard.this.getBlockX(), Bumbleguard.this.getBlockY(), Bumbleguard.this.getBlockZ()), 2);
+            return hiveIsValid() && getMinTimeOutOfHivePercentageProgress() == 1 && Bumbleguard.this.hivePos.closerThan(new Vec3i(Bumbleguard.this.getBlockX(), Bumbleguard.this.getBlockY(), Bumbleguard.this.getBlockZ()), 1.5);
         }
 
         @Override
@@ -504,7 +507,6 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         LivingEntity closest = null;
 
         for(int i = 0;i<enemyList.size();i++){
-            if(hasLineOfSight(enemyList.get(i))){
                 if(closest == null){
                     closest = enemyList.get(i);
                 }else{
@@ -512,7 +514,6 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
                         closest = enemyList.get(i);
                     };
                 }
-            }
         }
 
         return closest;

@@ -7,8 +7,10 @@ import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -193,7 +195,51 @@ public class Utils {
             double z = direction.z + offset * Math.sin(angle);
 
             // Create the particle
-            level.addParticle(particle, pos.getX(), pos.getY(), pos.getZ(), x, y, z);
+            level.addParticle(particle, pos.getCenter().x, pos.getCenter().y, pos.getCenter().z, x, y, z);
         }
     }
+
+    public static class BumbleguardTagUtil {
+
+        private static final String TAG_KEY = "BUMBLEGUARD_NO_ATTACK_LIST";
+
+        // Method to add a tag to an entity
+        public static void addTag(Entity entity, String tag) {
+            CompoundTag compound = entity.getPersistentData();
+            compound.putString(TAG_KEY, tag);
+        }
+
+        // Method to check if an entity has a specific tag
+        public static String getTag(Entity entity, String tag) {
+            CompoundTag compound = entity.getPersistentData();
+            return compound.getString(TAG_KEY);
+        }
+
+        public static boolean playerHasTaggedEntity(Entity entity, String playerUUIDasString) {
+            return getTag(entity, playerUUIDasString).contains(playerUUIDasString);
+        }
+
+        public static void addPlayerToTaggedEntity(Entity entity, String playerUUIDasString) {
+            if(playerHasTaggedEntity(entity, playerUUIDasString)) return;
+
+            if(getTag(entity, playerUUIDasString).isEmpty()){
+                addTag(entity, playerUUIDasString);
+                return;
+            }
+
+            String tag = getTag(entity, playerUUIDasString);
+            tag += "," + playerUUIDasString;
+
+            removeTag(entity);
+            addTag(entity, tag);
+
+        }
+
+        // Method to remove a tag from an entity
+        public static void removeTag(Entity entity) {
+            CompoundTag compound = entity.getPersistentData();
+            compound.remove(TAG_KEY);
+        }
+    }
+
 }

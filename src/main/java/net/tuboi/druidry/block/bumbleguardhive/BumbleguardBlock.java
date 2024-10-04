@@ -5,6 +5,7 @@ import io.redspace.ironsspellbooks.block.alchemist_cauldron.AlchemistCauldronTil
 import io.redspace.ironsspellbooks.registries.BlockRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
@@ -17,6 +18,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.phys.AABB;
+import net.neoforged.neoforge.event.level.NoteBlockEvent;
 import net.tuboi.druidry.Druidry;
 import net.tuboi.druidry.registries.DruidryBlockRegistry;
 
@@ -35,10 +38,15 @@ public class BumbleguardBlock extends BaseEntityBlock {
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
+
+    public BlockEntity newBlockEntity(BlockPos pPos, BlockState pState, Player owner, int spellpower) {
+        return new BumbleguardBlockEntity(pPos, pState, owner, spellpower);
+    }
+
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pPos, BlockState pState) {
-        return new BumbleguardBlockEntity(pPos, pState);
+        return new BumbleguardBlockEntity(pPos, pState, null, 1);
     }
 
     @Override

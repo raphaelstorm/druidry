@@ -6,6 +6,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.tuboi.druidry.Druidry;
+import net.tuboi.druidry.spells.BumbleguardSpell;
 import net.tuboi.druidry.spells.MeadowMinefieldSpell;
 import net.tuboi.druidry.spells.HiddenBoombloomSpell;
 import net.tuboi.druidry.spells.FertilizeSpell;
@@ -31,4 +32,5 @@ public class DruidrySpellRegistry {
     public static final DeferredHolder<AbstractSpell, AbstractSpell> FERTILIZE_SPELL = registerSpell(new FertilizeSpell());
     public static final DeferredHolder<AbstractSpell, AbstractSpell> HIDDEN_BOOMBLOOM_SPELL = registerSpell(new HiddenBoombloomSpell());
     public static final DeferredHolder<AbstractSpell, AbstractSpell> MEADOW_MINEFIELD_SPELL = registerSpell(new MeadowMinefieldSpell());
+    public static final DeferredHolder<AbstractSpell, AbstractSpell> SUMMON_BUMBLEGUARD_SPELL = registerSpell(new BumbleguardSpell());
 }
