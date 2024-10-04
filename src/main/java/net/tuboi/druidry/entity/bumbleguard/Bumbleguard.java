@@ -7,6 +7,8 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
@@ -30,11 +32,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BeehiveBlock;
 import net.minecraft.world.level.block.entity.BeehiveBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.Vec3;
 import net.tuboi.druidry.block.bumbleguardhive.BumbleguardBlockEntity;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
 import net.tuboi.druidry.utils.SendMessage;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -85,7 +89,14 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         this.xo = pX;
         this.yo = pY;
         this.zo = pZ;
-        this.ticksOutOfHiveCounter+=Math.ceil(getRandom().nextDouble()*600); //add between 0 and 30 seconds
+        this.ticksOutOfHiveCounter+=Math.ceil(getRandom().nextDouble()*600);
+        this.moveControl = new FlyingMoveControl(this, 20, true);
+        this.lookControl = new Bumbleguard.BeeLookControl(this);
+        this.setPathfindingMalus(PathType.DANGER_FIRE, -1.0F);
+        this.setPathfindingMalus(PathType.WATER, -1.0F);
+        this.setPathfindingMalus(PathType.WATER_BORDER, 16.0F);
+        this.setPathfindingMalus(PathType.COCOA, -1.0F);
+        this.setPathfindingMalus(PathType.FENCE, -1.0F);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -152,6 +163,34 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     @Override
     public boolean isFlying() {
         return !this.onGround();
+    }
+
+    @Override
+    protected void checkFallDamage(double pY, boolean pOnGround, BlockState pState, BlockPos pPos) {
+    }
+
+    @Override
+    protected float getSoundVolume() {
+        return 0.4F;
+    }
+
+    @Override
+    protected void playStepSound(BlockPos pPos, BlockState pBlock) {
+    }
+
+    @Override
+    protected SoundEvent getDeathSound() {
+        return SoundEvents.BEE_DEATH;
+    }
+
+    @Override
+    protected SoundEvent getHurtSound(DamageSource pDamageSource) {
+        return SoundEvents.BEE_HURT;
+    }
+
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return null;
     }
 
     @Override
@@ -222,7 +261,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     }
 
     @Override
-    protected PathNavigation createNavigation(Level pLevel) {
+    protected @NotNull PathNavigation createNavigation(@NotNull Level pLevel) {
         FlyingPathNavigation flyingpathnavigation = new FlyingPathNavigation(this, pLevel) {
             @Override
             public boolean isStableDestination(BlockPos p_27947_) {
@@ -300,12 +339,12 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
         @Override
         public void start() {
-            new SendMessage().Send("Starting search for enemies!");
+            //new SendMessage().Send("Starting search for enemies!");
         }
 
         @Override
         public void stop() {
-            new SendMessage().Send("Stopping search!");
+            //new SendMessage().Send("Stopping search!");
         }
 
         @Override
@@ -317,7 +356,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         public void tick() {
             if(Bumbleguard.this.getTarget() == null || Bumbleguard.this.getTarget() != null && !Bumbleguard.this.getTarget().isAlive()){
 
-                new SendMessage().Send("Searching for enemies!");
+                //new SendMessage().Send("Searching for enemies!");
 
                 //Look for new enemies
                 Bumbleguard.this.enemyList.clear();

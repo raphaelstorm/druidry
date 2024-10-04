@@ -2,6 +2,7 @@ package net.tuboi.druidry.block.bumbleguardhive;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.*;
@@ -15,7 +16,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.tuboi.druidry.entity.BoombloomEntity;
 import net.tuboi.druidry.entity.bumbleguard.Bumbleguard;
 import net.tuboi.druidry.registries.DruidryBlockRegistry;
 import net.tuboi.druidry.utils.Utils;
@@ -32,8 +32,10 @@ public class BumbleguardBlockEntity extends BlockEntity {
 
     private String hiveId;
     private Integer timeUntilNextBeeAllowedToLeave = 0;
+    private Integer secondCountDown = 0;
     private static final Integer maxTimeUntilNextBeeAllowedToLeave = 20;
 
+    private List<LivingEntity> targetList = new ArrayList<>();
     private List<StoredBee> bees = new ArrayList<>(); //List of all bee tags
     private List<Entity> individualWhitelist = new ArrayList<>();
     private Player owner;
@@ -50,8 +52,19 @@ public class BumbleguardBlockEntity extends BlockEntity {
 
     public static void serverTick(Level pLevel, BlockPos pPos, BlockState pState, BumbleguardBlockEntity pBeehive) {
 
-        //Check for dead bees and set the respawn timer
-        pBeehive.checkForKilledBeesAndUpdateStore();
+        //Actions to perform once every second
+        if(pBeehive.secondCountDown<=0){
+
+            //Gather new targets from the area
+            pBeehive.gatherTargetsFromSurroundingArea();
+
+            //Check for dead bees and set the respawn timer
+            pBeehive.checkForKilledBeesAndUpdateStore();
+
+            pBeehive.secondCountDown=20;
+        }else{
+            pBeehive.secondCountDown--;
+        }
 
         //Advance all respawn timers
         pBeehive.advanceBeeRespawnTicks();
@@ -85,8 +98,8 @@ public class BumbleguardBlockEntity extends BlockEntity {
         resetSpawnDelay();
 
         Direction direction = getLevel().getBlockState(this.getBlockPos()).getValue(BumbleguardBlock.FACING);
-        BlockPos blockpos = this.getBlockPos().relative(direction);
 
+        BlockPos blockpos = this.getBlockPos().offset(direction.getNormal());
 
         Bumbleguard newBumbleGuard = new Bumbleguard(
                 this.getLevel(),
@@ -97,10 +110,10 @@ public class BumbleguardBlockEntity extends BlockEntity {
                 blockpos.getY(),
                 blockpos.getZ()
         );
-        Vec3 dirVec = Utils.directionToVec3(direction); //Get random direction out of the hive
-        newBumbleGuard.setDeltaMovement(dirVec); //Give the bee a push out of the hive
-        newBumbleGuard.getLookControl().setLookAt(dirVec); //Make the bee look the direction of the launch
+        Vec3i dirVec = direction.getNormal(); //Get random direction out of the hive
         level.addFreshEntity(newBumbleGuard);
+        newBumbleGuard.setDeltaMovement(Vec3.atLowerCornerOf(dirVec)); //Give the bee a push out of the hive
+        newBumbleGuard.getLookControl().setLookAt(Vec3.atLowerCornerOf(dirVec)); //Make the bee look the direction of the launch
         getLevel().playSound(null, blockpos, SoundEvents.BEEHIVE_EXIT, SoundSource.BLOCKS, 1.0F, 1.0F);
         return true;
     }
@@ -140,20 +153,7 @@ public class BumbleguardBlockEntity extends BlockEntity {
     // #################################################################################################################
 
     public List<LivingEntity> getTargets() {
-
-        List<LivingEntity> enemies = new ArrayList<>();
-
-        //Get enemies around hive
-        Double r = this.DETECTION_DISTANCE;
-        AABB targetArea = AABB.ofSize(this.getBlockPos().getCenter(),r,r,r);
-
-        getLevel().getEntitiesOfClass(LivingEntity.class, targetArea).forEach(LivingEntity -> {
-            if(this.isValidTarget(LivingEntity)){
-                enemies.add(LivingEntity);
-            }
-        });
-
-        return enemies;
+        return this.targetList;
     }
 
     public boolean Enter(Bumbleguard pBumbleguard) {
@@ -196,6 +196,21 @@ public class BumbleguardBlockEntity extends BlockEntity {
     // #################################################################################################################
     // HELPERS
     // #################################################################################################################
+
+
+    private void gatherTargetsFromSurroundingArea(){
+        this.targetList.clear();
+
+        //Get enemies around hive
+        Double r = DETECTION_DISTANCE;
+        AABB targetArea = AABB.ofSize(this.getBlockPos().getCenter(),r,r,r);
+
+        getLevel().getEntitiesOfClass(LivingEntity.class, targetArea).forEach(LivingEntity -> {
+            if(this.isValidTarget(LivingEntity)){
+                this.targetList.add(LivingEntity);
+            }
+        });
+    }
 
     private boolean isValidTarget(Entity entity){
 
