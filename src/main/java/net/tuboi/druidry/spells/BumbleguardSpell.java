@@ -23,10 +23,13 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BeehiveBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.tuboi.druidry.Druidry;
 import net.tuboi.druidry.block.bumbleguardhive.BumbleguardBlock;
 import net.tuboi.druidry.block.bumbleguardhive.BumbleguardBlockEntity;
+import net.tuboi.druidry.entity.bumbleguard.Bumbleguard;
 import net.tuboi.druidry.registries.DruidryBlockRegistry;
 import net.tuboi.druidry.registries.DruidrySoundRegistry;
 import net.tuboi.druidry.utils.ParticleHelper;
@@ -91,13 +94,48 @@ public class BumbleguardSpell extends AbstractSpell {
 
     @Override
     public boolean checkPreCastConditions(Level level, int spellLevel, LivingEntity entity, MagicData playerMagicData) {
-        return checkBlockValid(level, entity);
+        return checkBlockValid(level, entity) || getHitEntity(level, entity) != null;
     }
 
 
     @Override
     public void onCast(Level level, int spellLevel, LivingEntity entity, CastSource castSource, MagicData playerMagicData) {
         super.onCast(level, spellLevel, entity, castSource, playerMagicData);
+
+        //If spell is cast on a living entity, tag or untag it to whitelist it from bumbleguard attacks
+        LivingEntity hitEntity = getHitEntity(level, entity);
+        if(hitEntity != null) {
+
+            //Get the name of the entity type, or the custom name if it has one. If its a player, get the playername
+            String nameToDisplay;
+            if(hitEntity.hasCustomName()){
+                nameToDisplay = hitEntity.getCustomName().getString();
+            }else if(hitEntity instanceof Player){
+                nameToDisplay = ((Player) hitEntity).getGameProfile().getName();
+            }else{
+                nameToDisplay = hitEntity.getType().getDescriptionId();
+            }
+
+            if (Utils.BumbleguardTagUtil.playerHasTaggedEntity(hitEntity, entity.getStringUUID())) {
+                //Remove the tag from the entity
+                Utils.BumbleguardTagUtil.removedPlayerFromTaggedEntity(hitEntity, entity.getStringUUID());
+
+                //Notify the player
+                if (entity instanceof ServerPlayer serverPlayer) {
+                    serverPlayer.connection.send(new ClientboundSetActionBarTextPacket(Component.translatable("ui.tubois_druidry.bumbleguard_untagged_entity", nameToDisplay).withStyle(ChatFormatting.RED)));
+                }
+
+            }else{
+                //Add the tag to the entity
+                Utils.BumbleguardTagUtil.addPlayerToTaggedEntity(hitEntity, entity.getStringUUID());
+
+                //Notify the player
+                if (entity instanceof ServerPlayer serverPlayer) {
+                    serverPlayer.connection.send(new ClientboundSetActionBarTextPacket(Component.translatable("ui.tubois_druidry.bumbleguard_tagged_entity", nameToDisplay).withStyle(ChatFormatting.GREEN)));
+                }
+            }
+            return;
+        }
 
         if (!checkBlockValid(level, entity) || !(entity instanceof Player)) {
             return;
@@ -190,7 +228,28 @@ public class BumbleguardSpell extends AbstractSpell {
         }
     }
 
-    private static boolean checkEntityValid(Level level, LivingEntity caster){
-        return true;
+    private static LivingEntity getHitEntity(Level level, LivingEntity caster) {
+        Vec3 start = caster.getEyePosition();
+        Vec3 end = start.add(caster.getLookAngle().scale(6));
+        AABB aabb = new AABB(start, end).inflate(1.0); // Inflate to ensure we catch entities near the ray
+
+        List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, aabb, entity -> entity != caster && !(entity instanceof Bumbleguard) && entity.isAlive());
+        LivingEntity closestEntity = null;
+        double closestDistance = Double.MAX_VALUE;
+
+        for (LivingEntity entity : entities) {
+            AABB entityAABB = entity.getBoundingBox().inflate(0.3); // Inflate to make it easier to hit
+            Optional<Vec3> optionalHit = entityAABB.clip(start, end);
+
+            if (optionalHit.isPresent()) {
+                double distance = start.distanceTo(optionalHit.get());
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestEntity = entity;
+                }
+            }
+        }
+
+        return closestEntity;
     }
 }

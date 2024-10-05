@@ -23,5 +23,7 @@
 
   "block.tubois_druidry.bumbleguard_hive" : "Bumbleguard Hive",
   "ui.tubois_druidry.bumbleguard_error_target_block" : "Target a bee nest or hive to use the spell!",
-  "ui.tubois_druidry.bumbleguard_error_too_close" : "The target is too close to another bumbleguard hive!"
+  "ui.tubois_druidry.bumbleguard_error_too_close" : "The target is too close to another bumbleguard hive!",
+  "ui.tubois_druidry.bumbleguard_tagged_entity" : "Bumbleguard will no longer attack %s",
+  "ui.tubois_druidry.bumbleguard_untagged_entity" : "Bumbleguard will now attack %s again"
 }

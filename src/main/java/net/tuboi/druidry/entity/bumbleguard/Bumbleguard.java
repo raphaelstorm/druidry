@@ -16,7 +16,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.control.LookControl;
-import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.GoalSelector;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
@@ -29,15 +28,13 @@ import net.minecraft.world.entity.animal.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BeehiveBlock;
-import net.minecraft.world.level.block.entity.BeehiveBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.Vec3;
 import net.tuboi.druidry.block.bumbleguardhive.BumbleguardBlockEntity;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
-import net.tuboi.druidry.utils.SendMessage;
+import net.tuboi.druidry.utils.Utils;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -101,11 +98,12 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 10.0)
-                .add(Attributes.FLYING_SPEED, 0.6F)
-                .add(Attributes.MOVEMENT_SPEED, 0.3F)
-                .add(Attributes.ATTACK_DAMAGE, 2.0)
-                .add(Attributes.FOLLOW_RANGE, 48.0);
+                .add(Attributes.MAX_HEALTH, 16.0)
+                .add(Attributes.FLYING_SPEED, 1.0F)
+                .add(Attributes.MOVEMENT_SPEED, 0.5F)
+                .add(Attributes.ATTACK_DAMAGE, 3.0)
+                .add(Attributes.FOLLOW_RANGE, 48.0)
+                .add(Attributes.SCALE, 1.3);
     }
 
     @Override
@@ -230,6 +228,13 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         return hasHive() && level().getBlockEntity(this.hivePos) instanceof BumbleguardBlockEntity && ((BumbleguardBlockEntity) level().getBlockEntity(this.hivePos)).IsMemberOf(Bumbleguard.this.getBumbleId());
     }
 
+    public BlockEntity getHive(){
+        if(hiveIsValid()){
+            return level().getBlockEntity(this.hivePos);
+        }
+        return null;
+    }
+
     // #################################################################################################################
     // NAVIGATION
     // #################################################################################################################
@@ -324,10 +329,19 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
         @Override
         public boolean canContinueToUse() {
-            return super.canContinueToUse() && Bumbleguard.this.hasTarget() && Bumbleguard.this.hasHive() && level().getBlockEntity(Bumbleguard.this.hivePos) instanceof BumbleguardBlockEntity
-                    && Bumbleguard.this.hivePos.getCenter().closerThan(Bumbleguard.this.getTarget().position(),
-                        ((BumbleguardBlockEntity) level().getBlockEntity(Bumbleguard.this.hivePos)).getChaseDistance()
-                    );
+            return super.canContinueToUse()
+                    && Bumbleguard.this.hasTarget()
+                    && isWithinChaseDistance(Bumbleguard.this.getTarget())
+                    && (Bumbleguard.this.owner == null
+                    || BumbleguardBlockEntity.isValidTarget((BumbleguardBlockEntity)getHive(), Bumbleguard.this.getTarget()));
+        }
+
+        @Override
+        public void stop() {
+            super.stop();
+            if(Bumbleguard.this.hasTarget() && !BumbleguardBlockEntity.isValidTarget((BumbleguardBlockEntity)getHive(), Bumbleguard.this.getTarget())){
+                Bumbleguard.this.setTarget(null);
+            }
         }
     }
 
@@ -366,7 +380,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
                 Bumbleguard.this.enemyList.addAll(getNewEnemies());
 
                 //From the avaliable targets given by the hive, select the closest one
-                Bumbleguard.this.setTarget(getClosestEnemyWithinLineOfSight());
+                Bumbleguard.this.setTarget(getClosestEnemy());
             }
         }
 
@@ -503,17 +517,17 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         return enemies;
     }
 
-    private LivingEntity getClosestEnemyWithinLineOfSight(){
+    private LivingEntity getClosestEnemy(){
         LivingEntity closest = null;
 
         for(int i = 0;i<enemyList.size();i++){
-                if(closest == null){
-                    closest = enemyList.get(i);
-                }else{
-                    if (this.distanceTo(closest) > this.distanceTo(enemyList.get(i))){
-                        closest = enemyList.get(i);
-                    };
-                }
+            if ((closest == null
+                    || this.distanceTo(closest) > this.distanceTo(enemyList.get(i)))
+                    && this.isWithinChaseDistance(enemyList.get(i))
+                    && BumbleguardBlockEntity.isValidTarget((BumbleguardBlockEntity)getHive(), enemyList.get(i))
+                ){
+                closest = enemyList.get(i);
+            };
         }
 
         return closest;
@@ -527,5 +541,10 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         if(this.ticksOutOfHiveCounter < minimumTicksOutOfHive){
             this.ticksOutOfHiveCounter++;
         }
+    }
+
+    //Check if the target is within the chase distance of the hive
+    private boolean isWithinChaseDistance(LivingEntity target){
+        return this.hiveIsValid() && this.hivePos.getCenter().closerThan(target.position(), ((BumbleguardBlockEntity) level().getBlockEntity(this.hivePos)).getChaseDistance());
     }
 }

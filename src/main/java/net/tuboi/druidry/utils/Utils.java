@@ -232,7 +232,30 @@ public class Utils {
 
             removeTag(entity);
             addTag(entity, tag);
+        }
 
+        public static void removedPlayerFromTaggedEntity(Entity entity, String playerUUIDasString) {
+            if(!playerHasTaggedEntity(entity, playerUUIDasString)) return;
+
+            String tag = getTag(entity, playerUUIDasString);
+            tag = tag.replace(playerUUIDasString, "");
+
+            //If there are two commas in a row, remove one
+            tag = tag.replace(",,", ",");
+
+            //If the tag starts with a comma, remove it
+            if(tag.startsWith(",")) tag = tag.substring(1);
+
+            //If the tag ends with a comma, remove it
+            if(tag.endsWith(",")) tag = tag.substring(0, tag.length()-1);
+
+            //If the tag has no more players, remove it
+            if(tag.isEmpty()){
+                removeTag(entity);
+            }else{ //Otherwise, update the tag
+                removeTag(entity);
+                addTag(entity, tag);
+            }
         }
 
         // Method to remove a tag from an entity
