@@ -5,6 +5,7 @@ import io.redspace.ironsspellbooks.block.alchemist_cauldron.AlchemistCauldronTil
 import io.redspace.ironsspellbooks.registries.BlockRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
@@ -19,9 +20,12 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.level.NoteBlockEvent;
 import net.tuboi.druidry.Druidry;
 import net.tuboi.druidry.registries.DruidryBlockRegistry;
+import net.tuboi.druidry.utils.ParticleHelper;
+import net.tuboi.druidry.utils.Utils;
 
 import javax.annotation.Nullable;
 
@@ -38,6 +42,19 @@ public class BumbleguardBlock extends BaseEntityBlock {
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
+    @Override
+    public void animateTick(BlockState pState, Level pLevel, BlockPos pPos, RandomSource pRandom) {
+        int count = 3;
+        Vec3 position = pPos.getCenter();
+        for (int i = 0; i < count; i++) {
+            double[] randomVec = Utils.GetVectorSpeeds(0.75d);
+            pLevel.addParticle(ParticleHelper.FERTILIZER_EMITTER, position.x+randomVec[0], position.y+randomVec[1], position.z+randomVec[2], randomVec[0]*0.01, randomVec[1]*0.1, randomVec[2]*0.01);
+        }
+    }
+
+        //##################################################################################################################
+    // Blockentity stuff
+    //##################################################################################################################
 
     public BlockEntity newBlockEntity(BlockPos pPos, BlockState pState, Player owner, int spellpower) {
         return new BumbleguardBlockEntity(pPos, pState, owner, spellpower);

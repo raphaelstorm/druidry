@@ -119,7 +119,6 @@ public class BumbleguardBlockEntity extends BlockEntity {
         getLevel().addFreshEntity(newBumbleGuard);
         newBumbleGuard.setDeltaMovement(Vec3.atLowerCornerOf(dirVec)); //Give the bee a push out of the hive
         newBumbleGuard.getLookControl().setLookAt(Vec3.atCenterOf(dirVec)); //Make the bee look the direction of the launch
-        Utils.createParticleBurst(getLevel(), blockpos, Vec3.atCenterOf(dirVec), 1000, ParticleTypes.FLAME);
         getLevel().playSound(null, blockpos, SoundEvents.BEEHIVE_EXIT, SoundSource.BLOCKS, 1.0F, 1.0F);
         return true;
     }
