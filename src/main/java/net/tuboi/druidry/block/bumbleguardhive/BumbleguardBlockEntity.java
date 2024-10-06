@@ -4,15 +4,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.Entity.RemovalReason;
-import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.Bee;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -37,16 +34,16 @@ public class BumbleguardBlockEntity extends BlockEntity {
     private static final Integer maxTimeUntilNextBeeAllowedToLeave = 20;
     private List<LivingEntity> targets = new ArrayList<>();
     private List<StoredBee> storedBees = new ArrayList<>();
-    private Player owner;
+    private UUID ownerUUID;
     private int spellpower = 10;
 
     public BumbleguardBlockEntity(BlockEntityType<? extends BumbleguardBlockEntity> pEntityType, BlockPos pPos, BlockState pState) {
         super(pEntityType, pPos, pState);
     }
 
-    public BumbleguardBlockEntity(BlockPos pPos, BlockState pState, Player owner, Integer spellpower) {
+    public BumbleguardBlockEntity(BlockPos pPos, BlockState pState, Player caster, Integer spellpower) {
         super(DruidryBlockRegistry.BUMBLEGUARD_HIVE_BLOCKENTITY.get(), pPos, pState);
-        this.owner = owner;
+        this.ownerUUID = caster != null ? caster.getUUID() : null;
         this.spellpower = spellpower;
         this.generateBeeTags();
     }
@@ -54,7 +51,7 @@ public class BumbleguardBlockEntity extends BlockEntity {
     public BumbleguardBlockEntity(BlockPos blockPos, BlockState blockState) {
         super(DruidryBlockRegistry.BUMBLEGUARD_HIVE_BLOCKENTITY.get(), blockPos, blockState);
         this.generateBeeTags();
-        this.owner = null;
+        this.ownerUUID = null;
         this.spellpower = 1;
     }
 
@@ -68,8 +65,8 @@ public class BumbleguardBlockEntity extends BlockEntity {
         super.saveAdditional(tag, pRegistries);
 
         // Save owner
-        if (this.owner != null) {
-            tag.putUUID("OwnerUUID", this.owner.getUUID());
+        if (this.ownerUUID != null) {
+            tag.putUUID("OwnerUUID", this.ownerUUID);
         }
 
         // Save spellpower
@@ -93,7 +90,7 @@ public class BumbleguardBlockEntity extends BlockEntity {
 
         // Load owner
         if (tag.hasUUID("OwnerUUID")) {
-            this.owner = this.level.getPlayerByUUID(tag.getUUID("OwnerUUID"));
+            this.ownerUUID = tag.getUUID("OwnerUUID");
         }
 
         // Load spellpower
@@ -169,7 +166,7 @@ public class BumbleguardBlockEntity extends BlockEntity {
 
         Bumbleguard newBumbleGuard = new Bumbleguard(
                 this.getLevel(),
-                this.owner,
+                this.ownerUUID,
                 id,
                 this.getBlockPos(),
                 blockpos.getCenter().x,
@@ -236,7 +233,6 @@ public class BumbleguardBlockEntity extends BlockEntity {
                 if (target != null) {
                     Bumbleguard bumbleguard = beesWithoutTarget.getFirst();
                     bumbleguard.setTarget(target);
-                    targetIterator.remove();
                     beesWithoutTarget.remove(bumbleguard);
                 }
             }
@@ -293,9 +289,8 @@ public class BumbleguardBlockEntity extends BlockEntity {
         return CHASE_DISTANCE;
     }
 
-
     public boolean hasOwner() {
-        return this.owner != null;
+        return this.ownerUUID != null;
     }
 
     // #################################################################################################################
@@ -319,41 +314,36 @@ public class BumbleguardBlockEntity extends BlockEntity {
 
     public static boolean isValidTarget(BumbleguardBlockEntity pBumbleguardBlockEntity, LivingEntity entity){
 
+        //Don't attack creatures who are not hostile or players
+        if(!(entity instanceof Player) && !(entity instanceof Mob && ((Mob) entity).getType().getCategory().equals(MobCategory.MONSTER))){
+            return false;
+        }
+
         //Don't attack creative or spectating players
         if(entity instanceof Player && (((Player) entity).isCreative()) || entity.isSpectator()){
             return false;
         }
 
-        //Don't attack bees or other bumbleguard
-        if(entity instanceof Bee || entity instanceof Bumbleguard){
-            return false;
-        }
-
         //Don't attack whitelisted creatures
-        if(pBumbleguardBlockEntity.hasOwner() && Utils.BumbleguardTagUtil.playerHasTaggedEntity(entity, pBumbleguardBlockEntity.owner.getUUID().toString())){
-            return false;
-        }
-
-        //Don't attack passive mobs
-        if(entity instanceof Animal && !(entity instanceof NeutralMob)){
+        if(pBumbleguardBlockEntity.hasOwner() && Utils.BumbleguardTagUtil.playerHasTaggedEntity(entity, pBumbleguardBlockEntity.ownerUUID.toString())){
             return false;
         }
 
         //Don't attack owner
-        if(pBumbleguardBlockEntity.hasOwner() && pBumbleguardBlockEntity.owner != null && entity instanceof Player && (entity.getUUID().equals(pBumbleguardBlockEntity.owner.getUUID()))){
+        if(pBumbleguardBlockEntity.hasOwner() && entity instanceof Player && (entity.getUUID().equals(pBumbleguardBlockEntity.ownerUUID))){
             return false;
         }
 
         //Don't attack pet's of owner
-        if(pBumbleguardBlockEntity.hasOwner() && pBumbleguardBlockEntity.owner != null && entity instanceof TamableAnimal && ((TamableAnimal) entity).isTame() && ((TamableAnimal) entity).isOwnedBy(pBumbleguardBlockEntity.owner)){
+        if(pBumbleguardBlockEntity.hasOwner() && entity instanceof TamableAnimal && ((TamableAnimal) entity).isTame() && ((TamableAnimal) entity).getOwnerUUID() != null && ((TamableAnimal) entity).getOwnerUUID().equals(pBumbleguardBlockEntity.ownerUUID)){
             return false;
         }
 
         //Don't attack pets of whitelisted players
-        if(pBumbleguardBlockEntity.hasOwner() && pBumbleguardBlockEntity.owner != null && entity instanceof TamableAnimal && ((TamableAnimal) entity).isTame()){
+        if(pBumbleguardBlockEntity.hasOwner() && entity instanceof TamableAnimal && ((TamableAnimal) entity).isTame()){
             LivingEntity petsOwner =((TamableAnimal) entity).getOwner();
             if (petsOwner instanceof Player) {
-                return !Utils.BumbleguardTagUtil.playerHasTaggedEntity(petsOwner, pBumbleguardBlockEntity.owner.getUUID().toString());
+                return !Utils.BumbleguardTagUtil.playerHasTaggedEntity(petsOwner, pBumbleguardBlockEntity.ownerUUID.toString());
             }
         }
 

@@ -162,17 +162,26 @@ public class BumbleguardSpell extends AbstractSpell {
         level.setBlockAndUpdate(pos.getBlockPos(), bumbleguardHive);
         level.removeBlockEntity(pos.getBlockPos());
 
-        //Spawn particles around the hive
-        spawnParticlesAroundHive(level, pos.getBlockPos().getCenter(), 100);
-
         // Schedule the creation of the block entity to the next tick
         level.getServer().execute(() -> {
             // Create the block entity
             if (hive instanceof BumbleguardBlock && level.getBlockState(pos.getBlockPos()).is(DruidryBlockRegistry.BUMBLEGUARD_HIVE_BLOCK)) {
-                BumbleguardBlockEntity bumbleguardBlockEntity = new BumbleguardBlockEntity(pos.getBlockPos(), bumbleguardHive, (Player) entity, (int) Math.ceil(getSpellPower(spellLevel, entity)));
+                BumbleguardBlockEntity bumbleguardBlockEntity = new BumbleguardBlockEntity(
+                        pos.getBlockPos(),
+                        bumbleguardHive,
+                        (Player) entity,
+                        (int) Math.ceil(getSpellPower(spellLevel, entity)
+                        )
+                );
                 level.setBlockEntity(bumbleguardBlockEntity);
             }
         });
+    }
+
+    @Override
+    public void onClientCast(Level level, int spellLevel, LivingEntity entity, ICastData castData) {
+        super.onClientCast(level, spellLevel, entity, castData);
+        spawnParticlesAroundHive(level, Utils.getTargetBlock(level,entity, ClipContext.Fluid.NONE, 6).getBlockPos().getCenter(), 50);
     }
 
     private boolean checkBlockValid(Level level, LivingEntity caster){

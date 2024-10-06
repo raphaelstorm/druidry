@@ -54,7 +54,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
     private final Integer minimumTicksOutOfHive = 800;
     private Double ticksOutOfHiveCounter = 0d;
-    private Player owner;
+    private UUID ownerUUID;
     private String bumbleId;
 
     @Nullable
@@ -76,9 +76,9 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         this.setPathfindingMalus(PathType.FENCE, -1.0F);
     }
 
-    public Bumbleguard(Level world, Player owner, String bumbleID, BlockPos hivePos, double pX, double pY, double pZ) {
+    public Bumbleguard(Level world, UUID ownerUUID, String bumbleID, BlockPos hivePos, double pX, double pY, double pZ) {
         super(DruidryEntityRegistry.BUMBLEGUARD.get(), world);
-        this.owner = owner;
+        this.ownerUUID = ownerUUID;
         this.bumbleId = bumbleID;
         this.hivePos = hivePos;
         this.setPos(pX, pY, pZ);
@@ -132,8 +132,8 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         tag.putDouble("TicksOutOfHiveCounter", this.ticksOutOfHiveCounter);
 
         // Save owner UUID
-        if (this.owner != null) {
-            tag.putUUID("OwnerUUID", this.owner.getUUID());
+        if (hasOwner()) {
+            tag.putUUID("OwnerUUID", this.ownerUUID);
         }
 
         // Save bumbleId
@@ -158,7 +158,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
         // Load owner UUID
         if (tag.hasUUID("OwnerUUID")) {
-            this.owner = this.level.getPlayerByUUID(tag.getUUID("OwnerUUID"));
+            this.ownerUUID = tag.getUUID("OwnerUUID");
         }
 
         // Load bumbleId
@@ -253,7 +253,14 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     }
 
     public UUID getOwnerUUID(){
-        return this.owner.getUUID();
+        return this.ownerUUID;
+    }
+
+    public Player getOwner(){
+        if(hasOwner()){
+            return this.level().getPlayerByUUID(this.ownerUUID);
+        }
+        return null;
     }
 
     public String getBumbleId(){
@@ -264,11 +271,16 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         return hasHive() && level().getBlockEntity(this.hivePos) instanceof BumbleguardBlockEntity && ((BumbleguardBlockEntity) level().getBlockEntity(this.hivePos)).IsMemberOf(Bumbleguard.this.getBumbleId());
     }
 
+    @Nullable
     public BlockEntity getHive(){
         if(hiveIsValid()){
             return level().getBlockEntity(this.hivePos);
         }
         return null;
+    }
+
+    public Boolean hasOwner(){
+        return this.ownerUUID != null;
     }
 
     // #################################################################################################################
@@ -375,14 +387,14 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
             return super.canContinueToUse()
                     && Bumbleguard.this.hasTarget()
                     && isWithinChaseDistance(Bumbleguard.this.getTarget())
-                    && (Bumbleguard.this.owner == null
-                    || BumbleguardBlockEntity.isValidTarget((BumbleguardBlockEntity)getHive(), Bumbleguard.this.getTarget()));
+                    && (!hasOwner()
+                    || (Bumbleguard.this.hiveIsValid() && BumbleguardBlockEntity.isValidTarget((BumbleguardBlockEntity)getHive(), Bumbleguard.this.getTarget())));
         }
 
         @Override
         public void stop() {
             super.stop();
-            if(Bumbleguard.this.hasTarget() && !BumbleguardBlockEntity.isValidTarget((BumbleguardBlockEntity)getHive(), Bumbleguard.this.getTarget())){
+            if(Bumbleguard.this.hasTarget() && Bumbleguard.this.hiveIsValid() && !BumbleguardBlockEntity.isValidTarget((BumbleguardBlockEntity)getHive(), Bumbleguard.this.getTarget())){
                 Bumbleguard.this.setTarget(null);
             }
         }
