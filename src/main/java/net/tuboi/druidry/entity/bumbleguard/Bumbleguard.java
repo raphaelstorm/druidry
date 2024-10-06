@@ -34,6 +34,7 @@ import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.Vec3;
 import net.tuboi.druidry.block.bumbleguardhive.BumbleguardBlockEntity;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
+import net.tuboi.druidry.utils.ParticleHelper;
 import net.tuboi.druidry.utils.Utils;
 import org.jetbrains.annotations.NotNull;
 
@@ -109,11 +110,10 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new Bumbleguard.BeeAttackGoal(this, 1.4f, true));
-        this.goalSelector.addGoal(1, new Bumbleguard.SearchForEnemiesGoal());
-        this.goalSelector.addGoal(2, new Bumbleguard.EnterHiveGoal());
-        this.goalSelector.addGoal(3, new Bumbleguard.ReturnToHiveGoal());
-        this.goalSelector.addGoal(4, new BeeWanderGoal());
-        this.goalSelector.addGoal(5, new Bumbleguard.SuicideGoal());
+        this.goalSelector.addGoal(1, new Bumbleguard.EnterHiveGoal());
+        this.goalSelector.addGoal(2, new Bumbleguard.ReturnToHiveGoal());
+        this.goalSelector.addGoal(3, new BeeWanderGoal());
+        this.goalSelector.addGoal(4, new Bumbleguard.SuicideGoal());
     }
 
     //Synced data
@@ -291,7 +291,14 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     @Override
     public void tick() {
         super.tick();
-        advanceTimeOutOfHiveCounter();
+
+        if(level().isClientSide){
+            if(this.random.nextDouble()>0.9){
+                spawnParticles(1);
+            }
+        }else{
+            advanceTimeOutOfHiveCounter();
+        }
     }
 
     // #################################################################################################################
@@ -343,47 +350,6 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
                 Bumbleguard.this.setTarget(null);
             }
         }
-    }
-
-    class SearchForEnemiesGoal extends BaseBeeGoal {
-        public boolean canBeeUse() {
-            return Bumbleguard.this.getTarget() == null || (Bumbleguard.this.getTarget() != null && !Bumbleguard.this.getTarget().isAlive());
-        }
-
-        public boolean canBeeContinueToUse() {
-            return Bumbleguard.this.getTarget() == null || (Bumbleguard.this.getTarget() != null && !Bumbleguard.this.getTarget().isAlive());
-        }
-
-        @Override
-        public void start() {
-            //new SendMessage().Send("Starting search for enemies!");
-        }
-
-        @Override
-        public void stop() {
-            //new SendMessage().Send("Stopping search!");
-        }
-
-        @Override
-        public boolean requiresUpdateEveryTick() {
-            return true;
-        }
-
-        @Override
-        public void tick() {
-            if(Bumbleguard.this.getTarget() == null || Bumbleguard.this.getTarget() != null && !Bumbleguard.this.getTarget().isAlive()){
-
-                //new SendMessage().Send("Searching for enemies!");
-
-                //Look for new enemies
-                Bumbleguard.this.enemyList.clear();
-                Bumbleguard.this.enemyList.addAll(getNewEnemies());
-
-                //From the avaliable targets given by the hive, select the closest one
-                Bumbleguard.this.setTarget(getClosestEnemy());
-            }
-        }
-
     }
 
     class BeeWanderGoal extends Goal {
@@ -500,7 +466,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     // HELPERS
     // #################################################################################################################
 
-
+    @Deprecated //Make hive give targets regularly instead of the bee fetching them
     List<LivingEntity> getNewEnemies(){
 
         //Create new list
@@ -547,4 +513,18 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     private boolean isWithinChaseDistance(LivingEntity target){
         return this.hiveIsValid() && this.hivePos.getCenter().closerThan(target.position(), ((BumbleguardBlockEntity) level().getBlockEntity(this.hivePos)).getChaseDistance());
     }
+
+    private void spawnParticles(Integer count) {
+
+        //todo: make new particle thats a bit smaller, like magic dust or something
+
+        for (int i = 0; i < count; i++) {
+            double x = this.getX() + (this.getRandom().nextDouble() - 0.5D) * (double)this.getBbWidth();
+            double y = this.getY() + this.getRandom().nextDouble() * (double)this.getBbHeight();
+            double z = this.getZ() + (this.getRandom().nextDouble() - 0.5D) * (double)this.getBbWidth();
+            level().addParticle(ParticleHelper.FERTILIZER_EMITTER, x, y, z, 0.0D, 0.0D, 0.0D);
+        }
+    }
+
+
 }

@@ -60,11 +60,11 @@ public class BumbleguardBlockEntity extends BlockEntity {
         //Actions to perform once every second
         if(pBeehive.secondCountDown<=0){
 
-            //Gather new targets from the area
-            pBeehive.gatherTargetsFromSurroundingArea();
-
             //Check for dead bees and set the respawn timer
             pBeehive.checkForKilledBeesAndUpdateStore();
+
+            //Distribute targets to bees
+            pBeehive.distributeTargetsToBumbleguard();
 
             pBeehive.secondCountDown=20;
         }else{
@@ -130,7 +130,7 @@ public class BumbleguardBlockEntity extends BlockEntity {
     private void checkForKilledBeesAndUpdateStore() {
 
         // Get all bumbleguards within the area
-        Double r = 50d;
+        Double r = 60d;
         AABB targetArea = AABB.ofSize(this.getBlockPos().getCenter(), r, r, r);
         List<Bumbleguard> bumblesInArea = getLevel().getEntitiesOfClass(Bumbleguard.class, targetArea);
 
@@ -148,15 +148,45 @@ public class BumbleguardBlockEntity extends BlockEntity {
         storedBees.forEach(bee -> {
             if ("ACTIVE".equals(bee.getStatus()) && !verifiedBees.contains(bee)) {
                 bee.setStatus("DEAD");
-                bee.setTimeUntilRespawn(200); //10 seconds respawn timer
+                bee.setTimeUntilRespawn((int)(900 + Math.ceil(Math.random() * 600d))); //1 minute +-15sec respawn timer
             }
         });
+    }
+
+    private void distributeTargetsToBumbleguard() {
+
+        gatherTargetsFromSurroundingArea();
+
+        /*todo: implement smart logic for distributing targets to bees, making sure that the target with the least
+        amount of assigned bees gets a new bee assigned to it, and prioritizing targets that are close to the hive
+        or close to the bee */
+
+        // Fetch all active bees
+        List<Bumbleguard> activeBees = getLevel().getEntitiesOfClass(Bumbleguard.class, AABB.ofSize(this.getBlockPos().getCenter(), 60, 60, 60));
+
+        // Check if there are any active bees without a target
+        List<Bumbleguard> beesWithoutTarget = activeBees.stream().filter(Bumbleguard -> !Bumbleguard.hasTarget()).collect(Collectors.toList());
+
+        // If there are bees without a target, assign them one from the list of targets
+        if (!beesWithoutTarget.isEmpty()) {
+            Iterator<LivingEntity> targetIterator = this.targets.iterator();
+            while (targetIterator.hasNext() && !beesWithoutTarget.isEmpty()) {
+                LivingEntity target = targetIterator.next();
+                if (target != null) {
+                    Bumbleguard bumbleguard = beesWithoutTarget.getFirst();
+                    bumbleguard.setTarget(target);
+                    targetIterator.remove();
+                    beesWithoutTarget.remove(bumbleguard);
+                }
+            }
+        }
     }
 
     // #################################################################################################################
     // API
     // #################################################################################################################
 
+    @Deprecated //Don't use this, make the hive give the bee a target instead
     public List<LivingEntity> getTargets() {
         return this.targets;
     }
