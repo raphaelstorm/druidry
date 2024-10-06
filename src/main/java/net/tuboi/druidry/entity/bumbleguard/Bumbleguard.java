@@ -172,6 +172,13 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         }
     }
 
+    /*
+              _   _
+             ( | / )
+           \\ \|/,'_
+           (")(_)()))=-
+              <\\
+     */
     // #################################################################################################################
     // API
     // #################################################################################################################
@@ -386,7 +393,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
         public boolean canContinueToUse() {
             return super.canContinueToUse()
                     && Bumbleguard.this.hasTarget()
-                    && isWithinChaseDistance(Bumbleguard.this.getTarget())
+                    && isWithinChaseDistance(Bumbleguard.this.getTarget()) //todo: make chase distance be stored in the bee, constantly fetching it from the hive is not efficient
                     && (!hasOwner()
                     || (Bumbleguard.this.hiveIsValid() && BumbleguardBlockEntity.isValidTarget((BumbleguardBlockEntity)getHive(), Bumbleguard.this.getTarget())));
         }
