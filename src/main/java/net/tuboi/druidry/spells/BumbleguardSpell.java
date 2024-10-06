@@ -23,8 +23,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BeehiveBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.tuboi.druidry.Druidry;
 import net.tuboi.druidry.block.bumbleguardhive.BumbleguardBlock;
@@ -188,7 +186,7 @@ public class BumbleguardSpell extends AbstractSpell {
             return false;
         }
 
-        if(!checkNoOtherHiveWithin30Blocks(level, blockHitResult.getBlockPos().getCenter())){
+        if(!hitblock.is(DruidryBlockRegistry.BUMBLEGUARD_HIVE_BLOCK) && !checkNoOtherHiveWithin30Blocks(level, blockHitResult.getBlockPos().getCenter())){
             if (caster instanceof ServerPlayer serverPlayer) {
                 serverPlayer.connection.send(new ClientboundSetActionBarTextPacket(Component.translatable("ui.tubois_druidry.bumbleguard_error_too_close").withStyle(ChatFormatting.RED)));
             }

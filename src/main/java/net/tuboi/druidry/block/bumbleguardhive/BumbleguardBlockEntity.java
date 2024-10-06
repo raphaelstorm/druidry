@@ -2,8 +2,11 @@ package net.tuboi.druidry.block.bumbleguardhive;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.*;
@@ -55,6 +58,64 @@ public class BumbleguardBlockEntity extends BlockEntity {
         this.spellpower = 1;
     }
 
+
+    // #################################################################################################################
+    // NBT
+    // #################################################################################################################
+
+    @Override
+    public void saveAdditional(CompoundTag tag, HolderLookup.Provider pRegistries) {
+        super.saveAdditional(tag, pRegistries);
+
+        // Save owner
+        if (this.owner != null) {
+            tag.putUUID("OwnerUUID", this.owner.getUUID());
+        }
+
+        // Save spellpower
+        tag.putInt("Spellpower", this.spellpower);
+
+        // Save stored bees
+        ListTag beesList = new ListTag();
+        for (StoredBee bee : this.storedBees) {
+            CompoundTag beeTag = new CompoundTag();
+            beeTag.putString("ID", bee.getId());
+            beeTag.putInt("TimeUntilRespawn", bee.getTimeUntilRespawn());
+            beeTag.putString("Status", bee.getStatus());
+            beesList.add(beeTag);
+        }
+        tag.put("StoredBees", beesList);
+    }
+
+    @Override
+    public void loadAdditional(CompoundTag tag, HolderLookup.Provider pRegistries) {
+        super.loadAdditional(tag, pRegistries);
+
+        // Load owner
+        if (tag.hasUUID("OwnerUUID")) {
+            this.owner = this.level.getPlayerByUUID(tag.getUUID("OwnerUUID"));
+        }
+
+        // Load spellpower
+        this.spellpower = tag.getInt("Spellpower");
+
+        // Load stored bees
+        this.storedBees.clear();
+        ListTag beesList = tag.getList("StoredBees", 10); // 10 is the ID for CompoundTag
+        for (int i = 0; i < beesList.size(); i++) {
+            CompoundTag beeTag = beesList.getCompound(i);
+            StoredBee bee = new StoredBee(
+                    beeTag.getString("ID"),
+                    beeTag.getInt("TimeUntilRespawn"),
+                    beeTag.getString("Status")
+            );
+            this.storedBees.add(bee);
+        }
+    }
+
+    // #################################################################################################################
+    // TICKING
+    // #################################################################################################################
     public static void serverTick(Level pLevel, BlockPos pPos, BlockState pState, BumbleguardBlockEntity pBeehive) {
 
         //Actions to perform once every second

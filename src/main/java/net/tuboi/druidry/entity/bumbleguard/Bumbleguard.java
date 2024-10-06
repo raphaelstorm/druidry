@@ -35,7 +35,6 @@ import net.minecraft.world.phys.Vec3;
 import net.tuboi.druidry.block.bumbleguardhive.BumbleguardBlockEntity;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
 import net.tuboi.druidry.utils.ParticleHelper;
-import net.tuboi.druidry.utils.Utils;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -53,14 +52,13 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
 
     private static final EntityDataAccessor<Byte> DATA_FLAGS_ID = SynchedEntityData.defineId(Bumbleguard.class, EntityDataSerializers.BYTE);
 
-    private Integer minimumTicksOutOfHive = 800;
+    private final Integer minimumTicksOutOfHive = 800;
     private Double ticksOutOfHiveCounter = 0d;
     private Player owner;
     private String bumbleId;
 
     @Nullable
     private BlockPos hivePos;
-    private List<LivingEntity> enemyList = new ArrayList<>();
 
     // #################################################################################################################
     // INITIATION
@@ -127,13 +125,51 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     // #################################################################################################################
 
     @Override
-    public void addAdditionalSaveData(CompoundTag pCompound) {
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
 
+        // Save ticksOutOfHiveCounter
+        tag.putDouble("TicksOutOfHiveCounter", this.ticksOutOfHiveCounter);
+
+        // Save owner UUID
+        if (this.owner != null) {
+            tag.putUUID("OwnerUUID", this.owner.getUUID());
+        }
+
+        // Save bumbleId
+        if (this.bumbleId != null) {
+            tag.putString("BumbleId", this.bumbleId);
+        }
+
+        // Save hivePos
+        if (this.hivePos != null) {
+            tag.putInt("HivePosX", this.hivePos.getX());
+            tag.putInt("HivePosY", this.hivePos.getY());
+            tag.putInt("HivePosZ", this.hivePos.getZ());
+        }
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag pCompound) {
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
 
+        // Load ticksOutOfHiveCounter
+        this.ticksOutOfHiveCounter = tag.getDouble("TicksOutOfHiveCounter");
+
+        // Load owner UUID
+        if (tag.hasUUID("OwnerUUID")) {
+            this.owner = this.level.getPlayerByUUID(tag.getUUID("OwnerUUID"));
+        }
+
+        // Load bumbleId
+        if (tag.contains("BumbleId")) {
+            this.bumbleId = tag.getString("BumbleId");
+        }
+
+        // Load hivePos
+        if (tag.contains("HivePosX") && tag.contains("HivePosY") && tag.contains("HivePosZ")) {
+            this.hivePos = new BlockPos(tag.getInt("HivePosX"), tag.getInt("HivePosY"), tag.getInt("HivePosZ"));
+        }
     }
 
     // #################################################################################################################
@@ -465,39 +501,6 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     // #################################################################################################################
     // HELPERS
     // #################################################################################################################
-
-    @Deprecated //Make hive give targets regularly instead of the bee fetching them
-    List<LivingEntity> getNewEnemies(){
-
-        //Create new list
-        List<LivingEntity> enemies = new ArrayList<>();
-
-        //If beehive is present, get the enemy list
-        if(this.hasHive()){
-            var hive = level().getBlockEntity(this.hivePos);
-            if (hive instanceof BumbleguardBlockEntity){
-                enemies.addAll(((BumbleguardBlockEntity) hive).getTargets());
-            }
-        }
-
-        return enemies;
-    }
-
-    private LivingEntity getClosestEnemy(){
-        LivingEntity closest = null;
-
-        for(int i = 0;i<enemyList.size();i++){
-            if ((closest == null
-                    || this.distanceTo(closest) > this.distanceTo(enemyList.get(i)))
-                    && this.isWithinChaseDistance(enemyList.get(i))
-                    && BumbleguardBlockEntity.isValidTarget((BumbleguardBlockEntity)getHive(), enemyList.get(i))
-                ){
-                closest = enemyList.get(i);
-            };
-        }
-
-        return closest;
-    }
 
     private Double getMinTimeOutOfHivePercentageProgress(){
         return this.ticksOutOfHiveCounter/ minimumTicksOutOfHive;
