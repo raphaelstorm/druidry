@@ -9,6 +9,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.tuboi.druidry.Druidry;
 import net.tuboi.druidry.entity.BoombloomEntity;
+import net.tuboi.druidry.entity.menhir.MenhirEntity;
 import net.tuboi.druidry.entity.bumbleguard.Bumbleguard;
 import net.tuboi.druidry.entity.FertilizeProjectile;
 
@@ -40,5 +41,11 @@ public class DruidryEntityRegistry  {
                     .sized(0.5f,0.5f)
                     .clientTrackingRange(64)
                     .build(ResourceLocation.fromNamespaceAndPath(Druidry.MODID, "bumbleguard").toString()));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<MenhirEntity>> MENHIR =
+            ENTITIES.register("menhir", () -> EntityType.Builder.<MenhirEntity>of(MenhirEntity::new, MobCategory.MISC)
+                    .sized(1f, 4f)
+                    .clientTrackingRange(64)
+                    .build(ResourceLocation.fromNamespaceAndPath(Druidry.MODID, "menhir").toString()));
 
 }

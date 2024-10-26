@@ -9,6 +9,8 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.tuboi.druidry.Druidry;
 import net.tuboi.druidry.entity.bumbleguard.BumbleguardRenderer;
+import net.tuboi.druidry.entity.menhir.MenhirModel;
+import net.tuboi.druidry.entity.menhir.MenhirRenderer;
 import net.tuboi.druidry.particle.FertilizerParticle;
 import net.tuboi.druidry.particle.FlowerParticle;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
@@ -22,11 +24,17 @@ public class ClientSetup {
         event.registerEntityRenderer(DruidryEntityRegistry.FERTILIZE_PROJECTILE.get(), NoopRenderer::new);
         event.registerEntityRenderer(DruidryEntityRegistry.BOOMBLOOM_ENTITY.get(), NoopRenderer::new);
         event.registerEntityRenderer(DruidryEntityRegistry.BUMBLEGUARD.get(), BumbleguardRenderer::new);
+        event.registerEntityRenderer(DruidryEntityRegistry.MENHIR.get(), MenhirRenderer::new);
     }
 
     @SubscribeEvent
     public static void registerParticles(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(DruidryParticleRegistry.FERTILIZER_PARTICLE.get(), FertilizerParticle.Provider::new);
         event.registerSpriteSet(DruidryParticleRegistry.FLOWER_PARTICLE.get(), FlowerParticle.Provider::new);
+    }
+
+    @SubscribeEvent
+    public static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(MenhirModel.LAYER_LOCATION, MenhirModel::createBodyLayer);
     }
 }

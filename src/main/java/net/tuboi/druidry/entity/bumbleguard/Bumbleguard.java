@@ -115,6 +115,7 @@ public class Bumbleguard extends Animal implements FlyingAnimal {
     }
 
     //Synced data
+    @Override
     protected void defineSynchedData(SynchedEntityData.Builder pBuilder) {
         super.defineSynchedData(pBuilder);
         pBuilder.define(DATA_FLAGS_ID, (byte)0);
