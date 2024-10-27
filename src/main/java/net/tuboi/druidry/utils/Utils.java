@@ -267,7 +267,7 @@ public class Utils {
         }
     }
 
-    private static LivingEntity getHitEntity(Level level, LivingEntity caster, double reach, double inflate) {
+    public static LivingEntity getHitEntity(Level level, LivingEntity caster, double reach, double inflate) {
         Vec3 start = caster.getEyePosition();
         Vec3 end = start.add(caster.getLookAngle().scale(reach));
         AABB aabb = new AABB(start, end).inflate(inflate); // Inflate to ensure we catch entities near the ray
