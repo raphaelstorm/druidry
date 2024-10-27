@@ -16,11 +16,13 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -263,6 +265,31 @@ public class Utils {
             CompoundTag compound = entity.getPersistentData();
             compound.remove(TAG_KEY);
         }
+    }
+
+    public static LivingEntity getHitEntity(Level level, LivingEntity caster, double reach, double inflate) {
+        Vec3 start = caster.getEyePosition();
+        Vec3 end = start.add(caster.getLookAngle().scale(reach));
+        AABB aabb = new AABB(start, end).inflate(inflate); // Inflate to ensure we catch entities near the ray
+
+        List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, aabb, entity -> entity != caster && entity.isAlive());
+        LivingEntity closestEntity = null;
+        double closestDistance = Double.MAX_VALUE;
+
+        for (LivingEntity entity : entities) {
+            AABB entityAABB = entity.getBoundingBox().inflate(0.3); // Inflate to make it easier to hit
+            Optional<Vec3> optionalHit = entityAABB.clip(start, end);
+
+            if (optionalHit.isPresent()) {
+                double distance = start.distanceTo(optionalHit.get());
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestEntity = entity;
+                }
+            }
+        }
+
+        return closestEntity;
     }
 
 }
