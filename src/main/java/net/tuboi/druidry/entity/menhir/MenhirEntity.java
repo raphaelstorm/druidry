@@ -12,6 +12,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
@@ -24,35 +25,42 @@ import java.util.Collections;
 
 public class MenhirEntity extends LivingEntity implements GeoEntity {
 
-    private static final EntityDataAccessor<Byte> DATA_FLAGS_ID = SynchedEntityData.defineId(MenhirEntity.class, EntityDataSerializers.BYTE);
+    private int angleVariant;
+    private float spellpower;
+    private @Nullable LivingEntity owner;
+    private int age;
 
     public MenhirEntity(EntityType<? extends MenhirEntity> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
-        this.entityData.set(DATA_FLAGS_ID, (byte)0);
         this.setNoGravity(true);
         this.setInvulnerable(true);
+        this.angleVariant = 1;
+        this.spellpower = 1.0f;
+        this.owner = null;
+        this.age = 0;
     }
 
-    public MenhirEntity(Level pLevel, Player pOwner, Float pSpellpower) {
-        this(DruidryEntityRegistry.MENHIR.get(), pLevel); //Run entity constructor
+    public MenhirEntity(Level pLevel, Player pOwner, Float pSpellpower, int pAngleVariant) {
+        this(DruidryEntityRegistry.MENHIR.get(), pLevel);
+        this.owner = pOwner;
+        this.spellpower = pSpellpower;
+        this.angleVariant = pAngleVariant;
+        this.age = 0;
     }
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder pBuilder) {
         super.defineSynchedData(pBuilder);
-        pBuilder.define(DATA_FLAGS_ID, (byte)0);
     }
 
     @Override
     public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
-        this.entityData.set(DATA_FLAGS_ID, pCompound.getByte("DataFlags"));
     }
 
     @Override
     public void addAdditionalSaveData(net.minecraft.nbt.CompoundTag pCompound) {
         super.addAdditionalSaveData(pCompound);
-        pCompound.putByte("DataFlags", this.entityData.get(DATA_FLAGS_ID));
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -61,6 +69,20 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
                 .add(Attributes.MOVEMENT_SPEED, 0.0D)
                 .add(Attributes.SCALE, 1.0D);
     }
+
+    // #################################################################################################################
+    // # Game mechanics
+    // #################################################################################################################
+
+    @Override
+    public void tick() {
+        super.tick();
+
+        if (this.age > 80) {
+            this.remove(RemovalReason.DISCARDED);
+        }
+    }
+
 
     // #################################################################################################################
     // API
