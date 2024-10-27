@@ -25,32 +25,37 @@ import java.util.Collections;
 
 public class MenhirEntity extends LivingEntity implements GeoEntity {
 
-    private int angleVariant;
     private float spellpower;
     private @Nullable LivingEntity owner;
     private int age;
+
+    private static final EntityDataAccessor<Integer> ANGLE_VARIANT = SynchedEntityData.defineId(MenhirEntity.class, EntityDataSerializers.INT);
 
     public MenhirEntity(EntityType<? extends MenhirEntity> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
         this.setNoGravity(true);
         this.setInvulnerable(true);
-        this.angleVariant = 1;
+        this.entityData.set(ANGLE_VARIANT, 0);
         this.spellpower = 1.0f;
         this.owner = null;
         this.age = 0;
     }
 
-    public MenhirEntity(Level pLevel, Player pOwner, Float pSpellpower, int pAngleVariant) {
+    public MenhirEntity(Level pLevel, LivingEntity pOwner, Float pSpellpower, int pAngleVariant) {
         this(DruidryEntityRegistry.MENHIR.get(), pLevel);
         this.owner = pOwner;
         this.spellpower = pSpellpower;
-        this.angleVariant = pAngleVariant;
+        this.entityData.set(ANGLE_VARIANT, pAngleVariant);
         this.age = 0;
+        this.setYRot(pOwner.getYRot());
+        this.setYHeadRot(pOwner.getYHeadRot());
+        this.getAttribute(Attributes.SCALE).setBaseValue(getScaleFromSpellpower(pSpellpower));
     }
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder pBuilder) {
         super.defineSynchedData(pBuilder);
+        pBuilder.define(ANGLE_VARIANT, 0);
     }
 
     @Override
@@ -80,6 +85,8 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
 
         if (this.age > 80) {
             this.remove(RemovalReason.DISCARDED);
+        }else{
+            this.age++;
         }
     }
 
@@ -141,13 +148,21 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     private final RawAnimation erect90Animation = RawAnimation.begin().thenPlay("erect_90");
     private final RawAnimation erect60Animation = RawAnimation.begin().thenPlay("erect_60");
     private final RawAnimation erect30Animation = RawAnimation.begin().thenPlay("erect_30");
+    private boolean animationPlayed = false;
 
-    private Integer animationVersion = 1; //0 = no animation, 1 = 90°, 2 = 60°, 3 = 30°
+    //0 = no animation, 1 = 90°, 2 = 60°, 3 = 30°
     private PlayState predicate(software.bernie.geckolib.animation.AnimationState event) {
         if (event.getController().getAnimationState() == AnimationController.State.STOPPED) {
-            if (animationVersion != 0) {
-                event.getController().setAnimation(erect90Animation);
-                animationVersion = 0;
+            int anim = this.entityData.get(ANGLE_VARIANT);
+            if(!animationPlayed){
+                if (anim == 1) {
+                    event.getController().setAnimation(erect90Animation);
+                }else if(anim == 2){
+                    event.getController().setAnimation(erect60Animation);
+                }else if(anim == 3){
+                    event.getController().setAnimation(erect30Animation);
+                }
+                animationPlayed = true;
             }
         }
         return PlayState.CONTINUE;
@@ -162,4 +177,13 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return cache;
     }
+
+    // #################################################################################################################
+    // # Helpers
+    // #################################################################################################################
+
+    private Double getScaleFromSpellpower(float spellpower){
+        return 1.0 + spellpower / 10.0;
+    }
+
 }
