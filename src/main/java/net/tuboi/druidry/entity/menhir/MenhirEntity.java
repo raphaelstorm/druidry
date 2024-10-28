@@ -30,12 +30,14 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     private int age;
 
     private static final EntityDataAccessor<Integer> ANGLE_VARIANT = SynchedEntityData.defineId(MenhirEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<String> PHASE = SynchedEntityData.defineId(MenhirEntity.class, EntityDataSerializers.STRING);
 
     public MenhirEntity(EntityType<? extends MenhirEntity> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
         this.setNoGravity(true);
         this.setInvulnerable(true);
         this.entityData.set(ANGLE_VARIANT, 0);
+        this.entityData.set(PHASE, "idle");
         this.spellpower = 1.0f;
         this.owner = null;
         this.age = 0;
@@ -46,6 +48,7 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
         this.owner = pOwner;
         this.spellpower = pSpellpower;
         this.entityData.set(ANGLE_VARIANT, pAngleVariant);
+        this.entityData.set(PHASE, "idle");
         this.age = 0;
         this.setYRot(pOwner.getYRot());
         this.setYHeadRot(pOwner.getYHeadRot());
@@ -83,13 +86,63 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     public void tick() {
         super.tick();
 
-        if (this.age > 80) {
+        if (this.age > 100) {
             this.remove(RemovalReason.DISCARDED);
         }else{
             this.age++;
         }
+
+        if(this.age > 20){// One second idle period after creation
+            this.entityData.set(PHASE, "erect");
+        }
     }
 
+    // #################################################################################################################
+    // # Geckolib animation stuff
+    // #################################################################################################################
+
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private final AnimationController animationController = new AnimationController(this, "controller", 0, this::predicate);
+    private final RawAnimation erect90Animation = RawAnimation.begin().thenPlay("erect_90");
+    private final RawAnimation erect60Animation = RawAnimation.begin().thenPlay("erect_60");
+    private final RawAnimation erect30Animation = RawAnimation.begin().thenPlay("erect_30");
+    private boolean animationPlayed = false;
+
+    //0 = no animation, 1 = 90°, 2 = 60°, 3 = 30°
+    private PlayState predicate(software.bernie.geckolib.animation.AnimationState event) {
+        if (event.getController().getAnimationState() == AnimationController.State.STOPPED) {
+            int anim = this.entityData.get(ANGLE_VARIANT);
+            if(!animationPlayed && this.entityData.get(PHASE).equals("erect")){
+                if (anim == 1) {
+                    event.getController().setAnimation(erect90Animation);
+                }else if(anim == 2){
+                    event.getController().setAnimation(erect60Animation);
+                }else if(anim == 3){
+                    event.getController().setAnimation(erect30Animation);
+                }
+                animationPlayed = true;
+            }
+        }
+        return PlayState.CONTINUE;
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
+        controllerRegistrar.add(animationController);
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return cache;
+    }
+
+    // #################################################################################################################
+    // # Helpers
+    // #################################################################################################################
+
+    private Double getScaleFromSpellpower(float spellpower){
+        return 1.0 + spellpower / 10.0;
+    }
 
     // #################################################################################################################
     // API
@@ -137,53 +190,6 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     @Override
     public HumanoidArm getMainArm() {
         return HumanoidArm.LEFT;
-    }
-
-    // #################################################################################################################
-    // # Geckolib animation stuff
-    // #################################################################################################################
-
-    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
-    private final AnimationController animationController = new AnimationController(this, "controller", 0, this::predicate);
-    private final RawAnimation erect90Animation = RawAnimation.begin().thenPlay("erect_90");
-    private final RawAnimation erect60Animation = RawAnimation.begin().thenPlay("erect_60");
-    private final RawAnimation erect30Animation = RawAnimation.begin().thenPlay("erect_30");
-    private boolean animationPlayed = false;
-
-    //0 = no animation, 1 = 90°, 2 = 60°, 3 = 30°
-    private PlayState predicate(software.bernie.geckolib.animation.AnimationState event) {
-        if (event.getController().getAnimationState() == AnimationController.State.STOPPED) {
-            int anim = this.entityData.get(ANGLE_VARIANT);
-            if(!animationPlayed){
-                if (anim == 1) {
-                    event.getController().setAnimation(erect90Animation);
-                }else if(anim == 2){
-                    event.getController().setAnimation(erect60Animation);
-                }else if(anim == 3){
-                    event.getController().setAnimation(erect30Animation);
-                }
-                animationPlayed = true;
-            }
-        }
-        return PlayState.CONTINUE;
-    }
-
-    @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
-        controllerRegistrar.add(animationController);
-    }
-
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return cache;
-    }
-
-    // #################################################################################################################
-    // # Helpers
-    // #################################################################################################################
-
-    private Double getScaleFromSpellpower(float spellpower){
-        return 1.0 + spellpower / 10.0;
     }
 
 }
