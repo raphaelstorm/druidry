@@ -30,6 +30,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 public class MenhirEntity extends LivingEntity implements GeoEntity {
 
@@ -37,6 +38,7 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     private float spellpower;
     private int age;
     private boolean ejectedCreatures = false;
+    private boolean erectParticlesSpawned = false;
 
     private static final EntityDataAccessor<Integer> ANGLE_VARIANT = SynchedEntityData.defineId(MenhirEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<String> PHASE = SynchedEntityData.defineId(MenhirEntity.class, EntityDataSerializers.STRING);
@@ -149,8 +151,9 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
 
         if(phase.equals("idle")){
             spawnIdleParticles();
-        }else if(phase.equals("erect")){
+        }else if(phase.equals("erect") && !erectParticlesSpawned){
             spawnErectParticles();
+            erectParticlesSpawned = true;
         }
     }
 
@@ -162,12 +165,11 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
         for (int i = 0; i < Math.ceil(scale*scale); i++) {
             double x = this.position().x + Math.random() * scale - scale/2;
             double z = this.position().z + Math.random() * scale - scale/2;
-            double y = this.position().y + Math.random() * 0.1 - 0.05;
+            double y = this.position().y + Math.random() * 0.1;
 
             ParticleOptions particle = new BlockParticleOption(
                     ParticleTypes.BLOCK,
-                    this.level().getBlockState(this.getOnPos()
-                    )
+                    this.level().getBlockState(this.getOnPos())
             );
 
             this.level().addParticle(particle, x, y, z, 0, 0, 0);
@@ -176,6 +178,35 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
 
     private void spawnErectParticles(){
 
+        var scale = this.getAttribute(Attributes.SCALE).getValue();
+        var baseVector = this.position();
+
+        //Create vector starting at base of menhir and mimicking the angle of the eruption
+        var angleVector = calculateVector(
+                this.entityData.get(ANGLE_VARIANT),
+                3*this.getAttribute(Attributes.SCALE).getValue(),
+                baseVector,
+                this.getYRot()
+                );
+
+        for(int i = 0; i< Math.ceil(Math.pow(scale*2,3)*100); i++){
+            ParticleOptions particle = new BlockParticleOption(
+                    ParticleTypes.BLOCK,
+                    this.level().getBlockState(this.getOnPos())
+            );
+
+            var scaledVec = angleVector.normalize().scale(1 + random.nextDouble()*scale*3);
+
+            this.level().addParticle(
+                    particle,
+                    baseVector.x()+random.nextDouble() * scale - scale/2,
+                    baseVector.y()+random.nextDouble() * scale/4 - (scale/4)/2,
+                    baseVector.z()+random.nextDouble() * scale - scale/2,
+                    scaledVec.x(),
+                    scaledVec.y(),
+                    scaledVec.z()
+            );
+        }
     }
 
     // #################################################################################################################
@@ -327,4 +358,31 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
         return HumanoidArm.LEFT;
     }
 
+    //##################################################################################################################
+    // Helpers
+    //##################################################################################################################
+
+    private Vec3 calculateVector(int angleVariant, double height, Vec3 baseVector, double rotationAngle) {
+        double x = baseVector.x;
+        double y = baseVector.y;
+        double z = baseVector.z;
+
+        double radians = Math.toRadians(rotationAngle);
+
+        if (angleVariant == 2) { // 60 degrees
+            double tiltRadians = Math.toRadians(60);
+            x += height * Math.cos(tiltRadians) * Math.cos(radians);
+            y += height * Math.sin(tiltRadians);
+            z += height * Math.cos(tiltRadians) * Math.sin(radians);
+        } else if (angleVariant == 3) { // 30 degrees
+            double tiltRadians = Math.toRadians(30);
+            x += height * Math.cos(tiltRadians) * Math.cos(radians);
+            y += height * Math.sin(tiltRadians);
+            z += height * Math.cos(tiltRadians) * Math.sin(radians);
+        } else if (angleVariant == 1) { // 90 degrees
+            y += height;
+        }
+
+        return new Vec3(x, y, z);
+    }
 }
