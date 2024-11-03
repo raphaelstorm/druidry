@@ -1,6 +1,9 @@
 package net.tuboi.druidry.entity.menhir;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -10,6 +13,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -106,6 +110,10 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
                 ejectedCreatures = true;
             }
         }
+
+        if(level().isClientSide){
+            spawnParticles();
+        }
     }
 
     private void ejectCreatures(){
@@ -130,6 +138,44 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
         for (LivingEntity target : targets) {
             target.push(forceDirection.x(), forceDirection.y(), forceDirection.z());
         }
+    }
+
+    // #################################################################################################################
+    // # Client side
+    // #################################################################################################################
+
+    private void spawnParticles(){
+        String phase = this.entityData.get(PHASE);
+
+        if(phase.equals("idle")){
+            spawnIdleParticles();
+        }else if(phase.equals("erect")){
+            spawnErectParticles();
+        }
+    }
+
+    private void spawnIdleParticles(){
+
+        var scale = this.getAttribute(Attributes.SCALE).getValue()*2;
+
+        //Create particles at the bottom of the menhir equal to 2x the scale
+        for (int i = 0; i < Math.ceil(scale*scale); i++) {
+            double x = this.position().x + Math.random() * scale - scale/2;
+            double z = this.position().z + Math.random() * scale - scale/2;
+            double y = this.position().y + Math.random() * 0.1 - 0.05;
+
+            ParticleOptions particle = new BlockParticleOption(
+                    ParticleTypes.BLOCK,
+                    this.level().getBlockState(this.getOnPos()
+                    )
+            );
+
+            this.level().addParticle(particle, x, y, z, 0, 0, 0);
+        }
+    }
+
+    private void spawnErectParticles(){
+
     }
 
     // #################################################################################################################
@@ -181,11 +227,11 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     // #################################################################################################################
 
     private Double getScaleFromSpellpower(float spellpower){
-        return 1.0 + spellpower / 10.0;
+        return 0.8 + spellpower / 5.0;
     }
 
     private Double getForceFromSpellpower(float spellpower){
-        return 1.0 + spellpower / 10.0;
+        return 1 + spellpower / 2.0;
     }
 
     private List<LivingEntity> getTargets(){
