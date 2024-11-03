@@ -150,21 +150,23 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
 
     //0 = no animation, 1 = 90°, 2 = 60°, 3 = 30°
     private PlayState predicate(software.bernie.geckolib.animation.AnimationState event) {
-        if (event.getController().getAnimationState() == AnimationController.State.STOPPED) {
-            int anim = this.entityData.get(ANGLE_VARIANT);
-            if(!animationPlayed && this.entityData.get(PHASE).equals("erect")){
-                if (anim == 1) {
-                    event.getController().setAnimation(erect90Animation);
-                }else if(anim == 2){
-                    event.getController().setAnimation(erect60Animation);
-                }else if(anim == 3){
-                    event.getController().setAnimation(erect30Animation);
-                }
-                animationPlayed = true;
-            }else if (!animationPlayed && this.entityData.get(PHASE).equals("idle")){
-                event.getController().setAnimation(idleAnimation);
+        boolean noAnimationRunning = event.getController().getAnimationState() == AnimationController.State.STOPPED;
+        int anim = this.entityData.get(ANGLE_VARIANT);
+        String phase = this.entityData.get(PHASE);
+
+        if(!animationPlayed && phase.equals("erect")){
+            if (anim == 1) {
+                event.getController().setAnimation(erect90Animation);
+            }else if(anim == 2){
+                event.getController().setAnimation(erect60Animation);
+            }else if(anim == 3){
+                event.getController().setAnimation(erect30Animation);
             }
+            animationPlayed = true;
+        }else if (noAnimationRunning && !animationPlayed && phase.equals("idle")){
+            event.getController().setAnimation(idleAnimation);
         }
+
         return PlayState.CONTINUE;
     }
 
