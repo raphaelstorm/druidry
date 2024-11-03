@@ -117,15 +117,11 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
 
         //get vector of force direction
         if(this.entityData.get(ANGLE_VARIANT) == 1){
-            //straight up
-            forceDirection = new Vec3(0, 1, 0).scale(forceModifier);
-
+            forceDirection = new Vec3(0, 1, 0).scale(forceModifier); //straight up
         }else if(this.entityData.get(ANGLE_VARIANT) == 2){
-            //45°, get direction of look
-            forceDirection = new Vec3(lookAngle.x(), 1, lookAngle.z()).scale(forceModifier);
+            forceDirection = new Vec3(lookAngle.x(), 1, lookAngle.z()).scale(forceModifier); //60°
         }else if(this.entityData.get(ANGLE_VARIANT) == 3){
-            //30°, get direction of look
-            forceDirection = new Vec3(lookAngle.x(), 0.5, lookAngle.z()).scale(forceModifier);
+            forceDirection = new Vec3(lookAngle.x(), 0.5, lookAngle.z()).scale(forceModifier); //30°
         }else{
             forceDirection = this.getLookAngle();
         }
