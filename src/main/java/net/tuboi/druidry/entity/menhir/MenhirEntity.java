@@ -1,5 +1,6 @@
 package net.tuboi.druidry.entity.menhir;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -7,9 +8,11 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -22,12 +25,14 @@ import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.Collections;
+import java.util.List;
 
 public class MenhirEntity extends LivingEntity implements GeoEntity {
 
-    private float spellpower;
     private @Nullable LivingEntity owner;
+    private float spellpower;
     private int age;
+    private boolean ejectedCreatures = false;
 
     private static final EntityDataAccessor<Integer> ANGLE_VARIANT = SynchedEntityData.defineId(MenhirEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<String> PHASE = SynchedEntityData.defineId(MenhirEntity.class, EntityDataSerializers.STRING);
@@ -59,6 +64,7 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     protected void defineSynchedData(SynchedEntityData.Builder pBuilder) {
         super.defineSynchedData(pBuilder);
         pBuilder.define(ANGLE_VARIANT, 0);
+        pBuilder.define(PHASE, "idle");
     }
 
     @Override
@@ -94,6 +100,39 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
 
         if(this.age > 20){// One second idle period after creation
             this.entityData.set(PHASE, "erect");
+
+            if(!ejectedCreatures){
+                ejectCreatures();
+                ejectedCreatures = true;
+            }
+        }
+    }
+
+    private void ejectCreatures(){
+        var targets = getTargets();
+
+        double forceModifier = getForceFromSpellpower(this.spellpower);
+        var lookAngle = this.getLookAngle().normalize();
+        Vec3 forceDirection;
+
+        //get vector of force direction
+        if(this.entityData.get(ANGLE_VARIANT) == 1){
+            //straight up
+            forceDirection = new Vec3(0, 1, 0).scale(forceModifier);
+
+        }else if(this.entityData.get(ANGLE_VARIANT) == 2){
+            //45°, get direction of look
+            forceDirection = new Vec3(lookAngle.x(), 1, lookAngle.z()).scale(forceModifier);
+        }else if(this.entityData.get(ANGLE_VARIANT) == 3){
+            //30°, get direction of look
+            forceDirection = new Vec3(lookAngle.x(), 0.5, lookAngle.z()).scale(forceModifier);
+        }else{
+            forceDirection = this.getLookAngle();
+        }
+
+        //Apply upwards force to all targets
+        for (LivingEntity target : targets) {
+            target.push(forceDirection.x(), forceDirection.y(), forceDirection.z());
         }
     }
 
@@ -103,9 +142,10 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private final AnimationController animationController = new AnimationController(this, "controller", 0, this::predicate);
-    private final RawAnimation erect90Animation = RawAnimation.begin().thenPlay("erect_90");
-    private final RawAnimation erect60Animation = RawAnimation.begin().thenPlay("erect_60");
-    private final RawAnimation erect30Animation = RawAnimation.begin().thenPlay("erect_30");
+    private final RawAnimation erect90Animation = RawAnimation.begin().thenPlay("animation.menhir.erect_90");
+    private final RawAnimation erect60Animation = RawAnimation.begin().thenPlay("animation.menhir.erect_60");
+    private final RawAnimation erect30Animation = RawAnimation.begin().thenPlay("animation.menhir.erect_30");
+    private final RawAnimation idleAnimation = RawAnimation.begin().thenPlay("animation.menhir.idle");
     private boolean animationPlayed = false;
 
     //0 = no animation, 1 = 90°, 2 = 60°, 3 = 30°
@@ -121,6 +161,8 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
                     event.getController().setAnimation(erect30Animation);
                 }
                 animationPlayed = true;
+            }else if (!animationPlayed && this.entityData.get(PHASE).equals("idle")){
+                event.getController().setAnimation(idleAnimation);
             }
         }
         return PlayState.CONTINUE;
@@ -142,6 +184,30 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
 
     private Double getScaleFromSpellpower(float spellpower){
         return 1.0 + spellpower / 10.0;
+    }
+
+    private Double getForceFromSpellpower(float spellpower){
+        return 1.0 + spellpower / 10.0;
+    }
+
+    private List<LivingEntity> getTargets(){
+
+        var scale = this.getAttribute(Attributes.SCALE).getValue();
+
+        //Expand scale to make it easier to hit creatures
+        scale *= 1.5;
+
+        //Dirty but can be done as the menhir entity is exactly 1 block wide and 3 blocks tall
+        var aabb = new AABB(
+                this.position().x-scale/2,
+                this.position().y,
+                this.position().z-scale/2,
+                this.position().x+scale/2,
+                this.position().y+scale*3,
+                this.position().z+scale/2
+        );
+
+        return level().getEntitiesOfClass(LivingEntity.class, aabb).stream().filter(e -> e != this).toList();
     }
 
     // #################################################################################################################
@@ -170,6 +236,31 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     @Override
     public boolean isNoGravity() {
         return true;
+    }
+
+    @Override
+    public boolean canBeCollidedWith() {
+        return false;
+    }
+
+    @Override
+    public boolean canCollideWith(Entity pEntity) {
+        return false; //No collision with other entities
+    }
+
+    @Override
+    public boolean isColliding(BlockPos pPos, BlockState pState) {
+        return false;
+    }
+
+    @Override
+    protected boolean isHorizontalCollisionMinor(Vec3 pDeltaMovement) {
+        return false;
+    }
+
+    @Override
+    public boolean isInWall() {
+        return false; //Prevent menhir from appearing gray as it will always be inside a wall
     }
 
     @Override
