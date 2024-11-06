@@ -152,8 +152,10 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
         if(phase.equals("idle")){
             spawnIdleParticles();
         }else if(phase.equals("erect") && !erectParticlesSpawned){
-            spawnErectParticles();
+            spawnErectParticles((int)Math.pow(this.getAttribute(Attributes.SCALE).getValue()*2,3)*5);
             erectParticlesSpawned = true;
+        }else if(phase.equals("erect")){
+            spawnErectParticles(1);
         }
     }
 
@@ -176,34 +178,37 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
         }
     }
 
-    private void spawnErectParticles(){
+    private void spawnErectParticles(int amount){
 
         var scale = this.getAttribute(Attributes.SCALE).getValue();
 
         var randomSource = new Random();
 
-        for(int i = 0; i< Math.ceil(Math.pow(scale*2,3)*100); i++){
+        for(int i = 0; i < amount; i++){
             ParticleOptions particle = new BlockParticleOption(
                     ParticleTypes.BLOCK,
                     this.level().getBlockState(this.getOnPos())
             );
 
-            var blockDistFromBase = randomSource.nextDouble()*menhirHeight*scale;
+            var verticalBlockDistanceFromBase = randomSource.nextDouble()*menhirHeight*scale;
+            var randomOffset = randomSource.nextDouble()*scale - scale/2;
 
-            Vec3 surfacePosition = switch ((int) Math.ceil(randomSource.nextDouble() * 4)) {
-                case 1 -> MenhirEntity.getPositionAtDistanceAndAngle(blockDistFromBase,this, scale / 2, 0);
-                case 2 -> MenhirEntity.getPositionAtDistanceAndAngle(blockDistFromBase,this, scale / 2, Math.toRadians(90d));
-                case 3 -> MenhirEntity.getPositionAtDistanceAndAngle(blockDistFromBase,this, scale / 2, Math.toRadians(180d));
-                case 4 -> MenhirEntity.getPositionAtDistanceAndAngle(blockDistFromBase,this, scale / 2, Math.toRadians(270d));
-                default -> this.position().add(0,blockDistFromBase,0);
+            Double radians = switch ((int) Math.ceil(randomSource.nextDouble() * 4)) {
+                case 1 -> 0d;
+                case 2 -> Math.toRadians(90d);
+                case 3 -> Math.toRadians(180d);
+                case 4 -> Math.toRadians(270d);
+                default -> 0d;
             };
+            Vec3 surfacePosition = MenhirEntity.getCylinderSurfacePosition(verticalBlockDistanceFromBase,this, scale / 2, radians, randomOffset);
 
-            Vec3 tiltedPosition = switch (this.entityData.get(ANGLE_VARIANT)) {
-                case 1 -> MenhirEntity.getRotatedPosition(surfacePosition, this, Math.toRadians(0));
-                case 2 -> MenhirEntity.getRotatedPosition(surfacePosition, this, Math.toRadians(30));
-                case 3 -> MenhirEntity.getRotatedPosition(surfacePosition, this, Math.toRadians(60));
-                default -> surfacePosition;
+            Double tiltAngle = switch (this.entityData.get(ANGLE_VARIANT)) {
+                case 1 -> 0d;
+                case 2 -> 30d;
+                case 3 -> 60d;
+                default -> 0d;
             };
+            Vec3 tiltedPosition = MenhirEntity.rotateAroundPoint(this.position(), surfacePosition, tiltAngle, this.getYRot());
 
             this.level().addParticle(
                     particle,
@@ -370,37 +375,58 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     // Helpers
     //##################################################################################################################
 
-    public static Vec3 getPositionAtDistanceAndAngle(Double yMod, LivingEntity entity, double distance, double radians) {
+    public static Vec3 getCylinderSurfacePosition(Double yMod, LivingEntity entity, double distance, double radians, double randomOffset) {
         var originalPosition = entity.position().add(0,yMod,0);
-        double baseAngle = Math.toRadians(entity.getYRot()); // Convert entity's Y-rotation to radians
-        double totalAngle = baseAngle + radians; // Add the input angle to the base angle
+        double totalAngle = Math.toRadians(entity.getYRot()) + radians; // Add the input angle to the base angle
 
-        double newX = originalPosition.x + distance * Math.cos(totalAngle);
-        double newZ = originalPosition.z + distance * Math.sin(totalAngle);
-        return new Vec3(newX, originalPosition.y, newZ);
+        double newX = originalPosition.x() + distance * Math.cos(totalAngle);
+        double newZ = originalPosition.z() + distance * Math.sin(totalAngle);
+
+        var adjustedPos = new Vec3(newX, originalPosition.y(), newZ);
+
+        //Apply random offset to the position along the x and z axis in a 2d plane relative to the menhir
+        return randomOffset != 0 ? offsetAlongPerpendicular(originalPosition, adjustedPos, randomOffset) : adjustedPos;
     }
 
-    public static Vec3 getRotatedPosition(Vec3 inputPosition, LivingEntity entity, double radians) {
-        return rotateXY(entity.position().vectorTo(inputPosition), radians, Math.toRadians(entity.getYRot()));
+    public static Vec3 offsetAlongPerpendicular(Vec3 center, Vec3 edgeCenter, double offsetScale) {
+        Vec3 direction = new Vec3(edgeCenter.x - center.x, 0, edgeCenter.z - center.z).normalize();
+        Vec3 perpendicular = new Vec3(-direction.z, 0, direction.x);
+
+        return new Vec3(
+                edgeCenter.x + perpendicular.x * offsetScale,
+                edgeCenter.y,
+                edgeCenter.z + perpendicular.z * offsetScale
+        );
     }
 
-    public static Vec3 rotateXY(Vec3 vector, double xAngleDegrees, double yAngleDegrees) {
-        double xAngleRadians = Math.toRadians(xAngleDegrees);
-        double yAngleRadians = Math.toRadians(yAngleDegrees);
+    public static Vec3 rotateAroundPoint(Vec3 originPoint, Vec3 actualPoint, double angle, double yRot) {
+        // Calculate the vector from the origin to the actual point
+        Vec3 direction = actualPoint.subtract(originPoint);
 
-        // Y-axis rotation
-        double cosY = Math.cos(yAngleRadians);
-        double sinY = Math.sin(yAngleRadians);
-        double rotatedX = vector.x * cosY + vector.z * sinY;
-        double rotatedZ = -vector.x * sinY + vector.z * cosY;
+        // Convert angle and yRot to radians
+        double angleRad = Math.toRadians(-angle); //Flip the angle to make the rotation go forwards
+        double yRotRad = Math.toRadians(yRot);
 
-        // X-axis rotation (using rotatedX and rotatedZ as new basis)
-        double cosX = Math.cos(xAngleRadians);
-        double sinX = Math.sin(xAngleRadians);
-        double rotatedY = vector.y * cosX - rotatedZ * sinX;
-        rotatedZ = vector.y * sinX + rotatedZ * cosX;
+        // Calculate the rotation axis based on the yRot
+        double sinYRot = Math.sin(yRotRad);
+        double cosYRot = Math.cos(yRotRad);
 
-        return new Vec3(rotatedX, rotatedY, rotatedZ);
+        // Create a rotation axis in the x-z plane (tipping direction based on yRot)
+        Vec3 rotationAxis = new Vec3(cosYRot, 0, sinYRot);
+
+        // Calculate the new x, y, z coordinates after tipping by 'angle' around the rotation axis
+        double rotatedX = direction.x * Math.cos(angleRad) + (rotationAxis.z * direction.y - rotationAxis.y * direction.z) * Math.sin(angleRad);
+        double rotatedY = direction.y * Math.cos(angleRad) + (rotationAxis.x * direction.z - rotationAxis.z * direction.x) * Math.sin(angleRad);
+        double rotatedZ = direction.z * Math.cos(angleRad) + (rotationAxis.y * direction.x - rotationAxis.x * direction.y) * Math.sin(angleRad);
+
+        // Adjust the point back to the originPoint reference frame
+        Vec3 rotatedPoint = new Vec3(
+                originPoint.x + rotatedX,
+                originPoint.y + rotatedY,
+                originPoint.z + rotatedZ
+        );
+
+        return rotatedPoint;
     }
 
 }
