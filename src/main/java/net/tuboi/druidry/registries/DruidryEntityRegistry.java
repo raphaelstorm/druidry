@@ -44,7 +44,7 @@ public class DruidryEntityRegistry  {
 
     public static final DeferredHolder<EntityType<?>, EntityType<MenhirEntity>> MENHIR =
             ENTITIES.register("menhir", () -> EntityType.Builder.<MenhirEntity>of(MenhirEntity::new, MobCategory.MISC)
-                    .sized(0.2f, 0.2f)
+                    .sized(0.2f, 3f)
                     .clientTrackingRange(128)
                     .build(ResourceLocation.fromNamespaceAndPath(Druidry.MODID, "menhir").toString()));
 

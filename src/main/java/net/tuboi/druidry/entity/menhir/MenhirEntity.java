@@ -322,7 +322,7 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     }
 
     public static Double getForceFromSpellpower(float spellpower){
-        return 1 + spellpower / 2.0;
+        return Math.sqrt(spellpower) - 0.25 + spellpower / 4.0;
     }
 
     private List<LivingEntity> getTargets(){
