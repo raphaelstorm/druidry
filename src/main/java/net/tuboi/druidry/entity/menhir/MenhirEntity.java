@@ -317,11 +317,11 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     // # Helpers
     // #################################################################################################################
 
-    private Double getScaleFromSpellpower(float spellpower){
+    public static Double getScaleFromSpellpower(float spellpower){
         return 0.8 + spellpower / 5.0;
     }
 
-    private Double getForceFromSpellpower(float spellpower){
+    public static Double getForceFromSpellpower(float spellpower){
         return 1 + spellpower / 2.0;
     }
 

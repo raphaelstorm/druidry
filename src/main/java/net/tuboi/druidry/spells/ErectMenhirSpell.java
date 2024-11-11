@@ -29,6 +29,14 @@ public class ErectMenhirSpell extends AbstractSpell {
         return ResourceLocation.fromNamespaceAndPath(Druidry.MODID, "erect_menhir");
     }
 
+    @Override
+    public List<MutableComponent> getUniqueInfo(int spellLevel, LivingEntity caster) {
+        return List.of(
+                Component.translatable("ui.tubois_druidry.menhir_width", Utils.SetMaxDecimals((double)MenhirEntity.getScaleFromSpellpower(getSpellPower(spellLevel, caster)),1)),
+                Component.translatable("ui.tubois_druidry.menhir_force", Utils.SetMaxDecimals((double)MenhirEntity.getForceFromSpellpower(getSpellPower(spellLevel, caster)),1))
+        );
+    }
+
     public ErectMenhirSpell(){
         this.manaCostPerLevel = 20;
         this.baseSpellPower = 1;

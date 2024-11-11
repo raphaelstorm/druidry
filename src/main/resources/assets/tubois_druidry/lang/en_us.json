@@ -25,5 +25,9 @@
   "ui.tubois_druidry.bumbleguard_error_target_block" : "Target a bee nest or hive to use the spell!",
   "ui.tubois_druidry.bumbleguard_error_too_close" : "The target is too close to another bumbleguard hive!",
   "ui.tubois_druidry.bumbleguard_tagged_entity" : "Bumbleguard will no longer attack %s",
-  "ui.tubois_druidry.bumbleguard_untagged_entity" : "Bumbleguard will now attack %s again"
+  "ui.tubois_druidry.bumbleguard_untagged_entity" : "Bumbleguard will now attack %s again",
+
+  "spell.tubois_druidry.erect_menhir" : "Erect Menhir",
+  "ui.tubois_druidry.menhir_width" : "%s blocks pillar width",
+  "ui.tubois_druidry.menhir_force" : "%s force multiplier"
 }
