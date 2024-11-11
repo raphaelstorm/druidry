@@ -22,6 +22,10 @@ public class DruidrySoundRegistry {
     public static DeferredHolder<SoundEvent, SoundEvent> NATURE_CAST_START = registerSoundEvent("spell.boombloom.start");
     public static DeferredHolder<SoundEvent, SoundEvent> NATURE_CAST_END = registerSoundEvent("spell.boombloom.end");
 
+    public static DeferredHolder<SoundEvent, SoundEvent> MENHIR_RUMBLE = registerSoundEvent("spell.menhir.rumble");
+    public static DeferredHolder<SoundEvent, SoundEvent> MENHIR_CRUMBLE = registerSoundEvent("spell.menhir.crumble");
+    public static DeferredHolder<SoundEvent, SoundEvent> MENHIR_ERUPT = registerSoundEvent("spell.menhir.erupt");
+
 
 
     private static DeferredHolder<SoundEvent, SoundEvent> registerSoundEvent(String name) {

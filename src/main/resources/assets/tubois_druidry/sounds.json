@@ -26,5 +26,20 @@
     "sounds": [
       "tubois_druidry:boombloom_armed"
     ]
+  },
+  "spell.menhir.rumble": {
+    "sounds": [
+      "tubois_druidry:menhir_rumble"
+    ]
+  },
+  "spell.menhir.crumble": {
+      "sounds": [
+      "tubois_druidry:menhir_crumble"
+      ]
+  },
+  "spell.menhir.erupt": {
+    "sounds": [
+      "tubois_druidry:menhir_erupt"
+    ]
   }
 }

@@ -7,6 +7,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -17,6 +18,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.tuboi.druidry.registries.DruidryEntityRegistry;
+import net.tuboi.druidry.registries.DruidrySoundRegistry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
@@ -29,6 +31,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 
 public class MenhirEntity extends LivingEntity implements GeoEntity {
@@ -104,17 +107,21 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
             this.age++;
         }
 
-        if(this.age > 20){// One second idle period after creation
+        if(this.age > 20 && this.age <= 60){// One second idle period after creation
             this.entityData.set(PHASE, "erect");
 
             if(!ejectedCreatures){
                 ejectCreatures();
                 ejectedCreatures = true;
             }
+        }else if(this.age > 60){
+            this.entityData.set(PHASE, "crumble");
         }
 
         if(level().isClientSide){
             spawnParticles();
+        }else{
+            playSound();
         }
     }
 
@@ -123,22 +130,65 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
 
         double forceModifier = getForceFromSpellpower(this.spellpower);
         var lookAngle = this.getLookAngle().normalize();
-        Vec3 forceDirection;
 
-        //get vector of force direction
-        if(this.entityData.get(ANGLE_VARIANT) == 1){
-            forceDirection = new Vec3(0, 1, 0).scale(forceModifier); //straight up
-        }else if(this.entityData.get(ANGLE_VARIANT) == 2){
-            forceDirection = new Vec3(lookAngle.x(), 1, lookAngle.z()).scale(forceModifier); //60°
-        }else if(this.entityData.get(ANGLE_VARIANT) == 3){
-            forceDirection = new Vec3(lookAngle.x(), 0.5, lookAngle.z()).scale(forceModifier); //30°
-        }else{
-            forceDirection = this.getLookAngle();
-        }
+
+        Vec3 forceDirection = switch (this.entityData.get(ANGLE_VARIANT)) {
+            case 1 -> new Vec3(0, (double)6/6, 0).scale(forceModifier); //straight up
+            case 2 -> new Vec3(lookAngle.x(), (double) 4/6, lookAngle.z()).scale(forceModifier); //60°
+            case 3 -> new Vec3(lookAngle.x(), (double) 2/6, lookAngle.z()).scale(forceModifier); //30°
+            default -> this.getLookAngle();
+        };
 
         //Apply upwards force to all targets
         for (LivingEntity target : targets) {
             target.push(forceDirection.x(), forceDirection.y(), forceDirection.z());
+        }
+    }
+
+    // #################################################################################################################
+    // # Sound stuff
+    // #################################################################################################################
+
+    private boolean rumbleSoundPlayed = false;
+    private boolean explodeSoundPlayed = false;
+    private boolean crumbleSoundPlayed = false;
+
+    private void playSound(){
+
+        var phase = this.entityData.get(PHASE);
+
+        if(phase.equals("idle") && !rumbleSoundPlayed){
+            level().playSound(
+                    this,
+                    this.blockPosition(),
+                    DruidrySoundRegistry.MENHIR_RUMBLE.get(),
+                    SoundSource.BLOCKS,
+                    1.0f,
+                    0.95f + (float) Math.random() * 0.1f
+            );
+            rumbleSoundPlayed = true;
+
+        }else if(phase.equals("erect") && !explodeSoundPlayed){
+            level().playSound(
+                    this,
+                    this.blockPosition(),
+                    DruidrySoundRegistry.MENHIR_ERUPT.get(),
+                    SoundSource.BLOCKS,
+                    1.0f,
+                    0.95f + (float) Math.random() * 0.1f
+            );
+            explodeSoundPlayed = true;
+
+        }else if(phase.equals("crumble") && !crumbleSoundPlayed){
+            level().playSound(
+                    this,
+                    this.blockPosition(),
+                    DruidrySoundRegistry.MENHIR_RUMBLE.get(),
+                    SoundSource.BLOCKS,
+                    1.0f,
+                    0.95f + (float) Math.random() * 0.1f
+            );
+            crumbleSoundPlayed = true;
         }
     }
 
@@ -152,16 +202,16 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
         if(phase.equals("idle")){
             spawnIdleParticles();
         }else if(phase.equals("erect") && !erectParticlesSpawned){
-            spawnErectParticles((int)Math.pow(this.getAttribute(Attributes.SCALE).getValue()*2,3)*5);
+            spawnErectParticles((int)Math.pow(Objects.requireNonNull(this.getAttribute(Attributes.SCALE)).getValue()*2,3)*5);
             erectParticlesSpawned = true;
-        }else if(phase.equals("erect")){
+        }else if(phase.equals("erect") || phase.equals("crumble")){
             spawnErectParticles(1);
         }
     }
 
     private void spawnIdleParticles(){
 
-        var scale = this.getAttribute(Attributes.SCALE).getValue()*2;
+        var scale = Objects.requireNonNull(this.getAttribute(Attributes.SCALE)).getValue()*2;
 
         //Create particles at the bottom of the menhir equal to 2x the scale
         for (int i = 0; i < Math.ceil(scale*scale); i++) {
@@ -180,8 +230,7 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
 
     private void spawnErectParticles(int amount){
 
-        var scale = this.getAttribute(Attributes.SCALE).getValue();
-
+        var scale = Objects.requireNonNull(this.getAttribute(Attributes.SCALE)).getValue();
         var randomSource = new Random();
 
         for(int i = 0; i < amount; i++){
@@ -194,19 +243,17 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
             var randomOffset = randomSource.nextDouble()*scale - scale/2;
 
             Double radians = switch ((int) Math.ceil(randomSource.nextDouble() * 4)) {
-                case 1 -> 0d;
                 case 2 -> Math.toRadians(90d);
                 case 3 -> Math.toRadians(180d);
                 case 4 -> Math.toRadians(270d);
-                default -> 0d;
+                default -> Math.toRadians(0d); //case 1
             };
             Vec3 surfacePosition = MenhirEntity.getCylinderSurfacePosition(verticalBlockDistanceFromBase,this, scale / 2, radians, randomOffset);
 
             Double tiltAngle = switch (this.entityData.get(ANGLE_VARIANT)) {
-                case 1 -> 0d;
                 case 2 -> 30d;
                 case 3 -> 60d;
-                default -> 0d;
+                default -> 0d; //case 1
             };
             Vec3 tiltedPosition = MenhirEntity.rotateAroundPoint(this.position(), surfacePosition, tiltAngle, this.getYRot());
 
@@ -283,7 +330,7 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
         var scale = this.getAttribute(Attributes.SCALE).getValue();
 
         //Expand scale to make it easier to hit creatures
-        scale *= 1.5;
+        scale *= 2;
 
         //Dirty but can be done as the menhir entity is exactly 1 block wide and 3 blocks tall
         var aabb = new AABB(
