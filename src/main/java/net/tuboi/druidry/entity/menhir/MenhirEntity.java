@@ -12,6 +12,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -129,20 +130,34 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
         var targets = getTargets();
 
         double forceModifier = getForceFromSpellpower(this.spellpower);
-        var lookAngle = this.getLookAngle().normalize();
 
-
-        Vec3 forceDirection = switch (this.entityData.get(ANGLE_VARIANT)) {
-            case 1 -> new Vec3(0, (double)6/6, 0).scale(forceModifier); //straight up
-            case 2 -> new Vec3(lookAngle.x(), (double) 4/6, lookAngle.z()).scale(forceModifier); //60°
-            case 3 -> new Vec3(lookAngle.x(), (double) 2/6, lookAngle.z()).scale(forceModifier); //30°
-            default -> this.getLookAngle();
+        Double angle = switch (this.entityData.get(ANGLE_VARIANT)) {
+            case 1 -> 90d;
+            case 2 -> 60d;
+            case 3 -> 30d;
+            default -> 0d;
         };
+
+        var forceDirection = calculateMovementVector(this.getYHeadRot(), angle).normalize().scale(forceModifier);
 
         //Apply upwards force to all targets
         for (LivingEntity target : targets) {
-            target.push(forceDirection.x(), forceDirection.y(), forceDirection.z());
+            target.setDeltaMovement(target.getDeltaMovement().add(forceDirection));
+            target.hurtMarked = true;
         }
+    }
+
+    public Vec3 calculateMovementVector(double yRotation, double angle) {
+        // Convert degrees to radians for trigonometric functions
+        double yRotRadians = Math.toRadians(yRotation);
+        double angleRadians = Math.toRadians(angle);
+
+        // Calculate a vector angled upwards by the angle while maintaining the y rotation
+        double x = -Math.sin(yRotRadians) * Math.cos(angleRadians);
+        double y = Math.sin(angleRadians);
+        double z = Math.cos(yRotRadians) * Math.cos(angleRadians);
+
+        return new Vec3(x, y, z);
     }
 
     // #################################################################################################################
@@ -193,7 +208,7 @@ public class MenhirEntity extends LivingEntity implements GeoEntity {
     }
 
     // #################################################################################################################
-    // # Client side
+    // # Particles
     // #################################################################################################################
 
     private void spawnParticles(){
